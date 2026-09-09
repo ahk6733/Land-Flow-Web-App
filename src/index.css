@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Roboto", "Tiro Bangla", "Hind Siliguri", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Tiro Bangla", serif;
+  --color-sidebar-bg: #14141e; /* Very dark blue/grey */
+  --color-sidebar-hover: #1f1f2e;
+  --color-sidebar-active: #2a2b38;
+  --color-main-bg: #f3f4f6;
+  --color-card-bg: #ffffff;
+}
+
+body {
+  font-family: "Roboto", "Tiro Bangla", "Hind Siliguri", "Inter", sans-serif;
+  @apply antialiased bg-[var(--color-main-bg)] text-slate-800;
+}
+
+/* Custom UI Utilities */
+.glass {
+  @apply bg-white/70 backdrop-blur-lg border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+}
+
+.glass-card {
+  @apply bg-white/90 backdrop-blur-xl border border-white/50 shadow-sm rounded-2xl;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
