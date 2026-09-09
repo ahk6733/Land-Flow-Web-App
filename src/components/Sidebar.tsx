@@ -33,10 +33,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
     { id: 'customers', label: 'Customer List', icon: Users },
   ];
 
+  if (currentUser?.isAdmin || currentUser?.userType === 'admin') {
+    menuItems.push({ id: 'appUsers', label: 'App User', icon: UserCheck });
+  }
+
   menuItems.push({ id: 'profile', label: 'Profile & Settings', icon: Settings });
 
   return (
-    <aside className={`fixed bottom-0 left-0 right-0 z-50 flex flex-row h-16 md:h-full md:relative md:flex-col ${isExpanded ? 'md:w-64' : 'md:w-20'} print:hidden bg-[var(--color-sidebar-bg)] transition-all duration-300 overflow-hidden border-t md:border-t-0 md:border-r border-slate-800 shrink-0`}>
+    <aside className={`z-50 flex flex-row h-16 w-full md:w-auto md:h-full md:relative md:flex-col ${isExpanded ? 'md:w-64' : 'md:w-20'} print:hidden bg-[var(--color-sidebar-bg)] transition-all duration-300 overflow-hidden border-t md:border-t-0 md:border-r border-slate-800 shrink-0`}>
       <div className={`hidden md:flex p-4 items-center ${isExpanded ? 'justify-between' : 'justify-center flex-col gap-4 mt-2'}`}>
         {isExpanded && (
           <div className="flex items-center gap-3 overflow-hidden group">
@@ -58,7 +62,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
         </button>
       </div>
 
-      <nav className="flex flex-row justify-around w-full md:w-auto md:flex-1 md:flex-col px-1 md:px-3 space-x-0 md:space-y-1 overflow-x-auto md:overflow-y-auto mt-0 md:mt-4 scrollbar-hide items-center md:items-stretch py-1 md:py-0">
+      <nav className="flex flex-row justify-around md:justify-start w-full md:w-auto md:flex-1 md:flex-col px-1 md:px-3 space-x-0 md:space-y-2 overflow-x-auto md:overflow-y-auto mt-0 md:mt-4 scrollbar-hide items-center md:items-stretch py-1 md:py-0">
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
           const Icon = item.icon;
@@ -67,7 +71,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex-1 flex flex-col md:flex-row items-center justify-center md:justify-start ${isExpanded ? 'md:px-4 md:py-3.5' : 'md:justify-center md:p-3'} md:rounded-xl text-sm font-medium transition-all duration-200 ${
+              className={`cursor-pointer max-md:flex-1 w-full flex flex-col md:flex-row items-center justify-center md:justify-start ${isExpanded ? 'md:px-4 md:py-3' : 'md:justify-center md:p-3'} md:rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive 
                   ? 'text-indigo-400 md:bg-[var(--color-sidebar-active)] md:text-white' 
                   : 'text-slate-400 hover:bg-[var(--color-sidebar-hover)] hover:text-slate-200'

@@ -5,6 +5,12 @@ import { Attachment } from '../types';
  * This bypasses native iframe embedding blocks inside containers/sandboxes.
  */
 export const openAttachmentInNewTab = async (file: Attachment) => {
+  // If it is an external link (like Google Drive)
+  if (file.type === 'link' || (file.url && file.url.startsWith('http'))) {
+    window.open(file.url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   // If it is a physically stored file
   if (file.savedFileName) {
     const electronAPI = (window as any).electronAPI;

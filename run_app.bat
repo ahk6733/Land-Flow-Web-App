@@ -9,7 +9,7 @@ start "LandFlow Server" cmd /c "npm run dev"
 timeout /t 5 /nobreak > NUL
 
 :: Now open the browser
-start http://localhost:3000
+start http://localhost:5173
 
 echo Application launched in browser. You can close this window.
 pause

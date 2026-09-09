@@ -153,8 +153,16 @@ export default function TransactionForm({
   const [errorText, setErrorText] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Button click feedback states
+  const [khatianFeedback, setKhatianFeedback] = useState(false);
+  const [dagFeedbackId, setDagFeedbackId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Drive link states
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   // Populate form if editing
   useEffect(() => {
@@ -619,6 +627,9 @@ export default function TransactionForm({
     };
 
     setKhatians([...khatians, newKh]);
+    
+    setKhatianFeedback(true);
+    setTimeout(() => setKhatianFeedback(false), 1500);
   };
 
   // Remove Khatian
@@ -659,6 +670,9 @@ export default function TransactionForm({
         return { ...k, dags: [...k.dags, newDag] };
       })
     );
+    
+    setDagFeedbackId(khId);
+    setTimeout(() => setDagFeedbackId(null), 1500);
   };
 
   // Remove Dag from specific Khatian
@@ -688,77 +702,19 @@ export default function TransactionForm({
     );
   };
 
-  // Handle Drag attachments events
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
-  // Process selected attachment files to non-volatile physical format
-  const processFiles = async (files: FileList) => {
-    const electronAPI = (window as any).electronAPI;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-
-      try {
-        if (electronAPI && (file as any).path) {
-          // Send to main process
-          const result = await electronAPI.saveAttachment((file as any).path, file.name);
-          if (result.success) {
-            const newAtt: Attachment = {
-              id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-              name: file.name,
-              type: file.type || 'application/octet-stream',
-              size: file.size,
-              savedFileName: result.savedFileName
-            };
-            setAttachments((prev) => [...prev, newAtt]);
-          } else {
-            alert(`ফাইল আপলোড ব্যর্থ হয়েছে: ${result.error}`);
-          }
-        } else {
-          // Fallback if electron API is missing (e.g. pure browser mode)
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              const rawBase64 = event.target.result as string;
-              const newAtt: Attachment = {
-                id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                name: file.name,
-                type: file.type || 'application/octet-stream',
-                size: file.size,
-                url: rawBase64 // fallback
-              };
-              setAttachments((prev) => [...prev, newAtt]);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      } catch (e) {
-        console.error("Error processing file:", e);
-      }
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      processFiles(e.target.files);
-    }
+  // Handle Drive Link attachments
+  const handleAddLinkAttachment = () => {
+    if (!linkUrl.trim()) return;
+    const newAtt: Attachment = {
+      id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: linkTitle.trim() || 'Document Link',
+      type: 'link',
+      size: 0,
+      url: linkUrl.trim()
+    };
+    setAttachments((prev) => [...prev, newAtt]);
+    setLinkTitle('');
+    setLinkUrl('');
   };
 
   const handleRemoveAttachment = (id: string) => {
@@ -1243,10 +1199,10 @@ export default function TransactionForm({
               <button
                 type="button"
                 onClick={handleAddKhatian}
-                className={`${khatians.length > 0 ? 'hidden md:flex' : 'flex'} shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl items-center justify-center gap-1 cursor-pointer transition shadow-xs select-none h-10 w-full md:w-auto`}
+                className={`${khatians.length > 0 ? 'hidden md:flex' : 'flex'} shrink-0 px-4 py-2 ${khatianFeedback ? 'bg-emerald-800 scale-95 ring-2 ring-emerald-300' : 'bg-emerald-600 hover:bg-emerald-800'} text-white font-bold text-xs rounded-xl items-center justify-center gap-1 cursor-pointer transition-all duration-200 shadow-xs select-none h-10 w-full md:w-auto`}
               >
-                <Plus size={12} />
-                নতুন খতিয়ান যোগ করুন
+                {khatianFeedback ? <Check size={12} /> : <Plus size={12} />}
+                {khatianFeedback ? 'খতিয়ান যুক্ত হয়েছে!' : 'নতুন খতিয়ান যোগ করুন'}
               </button>
             </div>
           </div>
@@ -1274,10 +1230,10 @@ export default function TransactionForm({
                   <button
                     type="button"
                     onClick={handleAddKhatian}
-                    className="md:hidden shrink-0 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-800 text-white font-bold text-[10px] rounded flex items-center justify-center gap-1 cursor-pointer transition shadow-xs select-none"
+                    className={`md:hidden shrink-0 px-2.5 py-1 ${khatianFeedback ? 'bg-emerald-800 scale-95 ring-2 ring-emerald-300' : 'bg-emerald-600 hover:bg-emerald-800'} text-white font-bold text-[10px] rounded flex items-center justify-center gap-1 cursor-pointer transition-all duration-200 shadow-xs select-none`}
                   >
-                    <Plus size={10} />
-                    নতুন খতিয়ান
+                    {khatianFeedback ? <Check size={10} /> : <Plus size={10} />}
+                    {khatianFeedback ? 'যুক্ত হয়েছে!' : 'নতুন খতিয়ান'}
                   </button>
                 )}
               </div>
@@ -1382,10 +1338,10 @@ export default function TransactionForm({
                   <button
                     type="button"
                     onClick={() => handleAddDag(kh.id)}
-                    className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 px-3 py-1.5 rounded-lg hover:shadow-xs transition select-none cursor-pointer relative z-10"
+                    className={`flex items-center gap-1 ${dagFeedbackId === kh.id ? 'bg-emerald-100 border-emerald-400 text-emerald-800 scale-95' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'} font-bold text-xs border px-3 py-1.5 rounded-lg hover:shadow-xs transition-all duration-200 select-none cursor-pointer relative z-10`}
                   >
-                    <Plus size={12} className="text-slate-700" />
-                    <span>দাগ যোগ করুন</span>
+                    {dagFeedbackId === kh.id ? <Check size={12} className="text-emerald-600" /> : <Plus size={12} className="text-slate-700" />}
+                    <span>{dagFeedbackId === kh.id ? 'যুক্ত হয়েছে!' : 'দাগ যোগ করুন'}</span>
                   </button>
                 </div>
 
@@ -1555,30 +1511,38 @@ export default function TransactionForm({
               দলিলের স্ক্যান কপি বা মূল দলিল ছবি সংযুক্তি
             </div>
 
-            {/* Upload Visual Core Zone */}
-            <div
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center font-sans space-y-2 cursor-pointer transition-all duration-155 select-none ${
-                dragActive 
-                  ? 'border-emerald-600 bg-emerald-50/20' 
-                  : 'border-slate-300 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-50'
-              }`}
-            >
-              <HardDriveUpload size={28} className="text-slate-400 shrink-0" />
-              <p className="text-slate-600 text-xs font-bold font-sans text-center">দলিল ফাইল বা ছবির ফাইল ড্র্যাগ এন্ড ড্রপ করুন অথবা এখানে ক্লিক করুন</p>
-              <p className="text-[10px] text-slate-400 text-center uppercase font-bold text-mono">পিডিএফ বা ছবির ফাইল সংযুক্তি (সর্বমোট সাইজ ১০ মেগাবাইট)</p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*,application/pdf"
-                multiple
-                className="hidden"
-              />
+            {/* Drive Link Input Zone */}
+            <div className="border border-slate-300 rounded-xl p-4 space-y-3 bg-slate-50/50">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">ফাইলের নাম/শিরোনাম (ঐচ্ছিক)</label>
+                  <input
+                    type="text"
+                    value={linkTitle}
+                    onChange={(e) => setLinkTitle(e.target.value)}
+                    placeholder="যেমন: সি.এস খতিয়ান কপি"
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">গুগল ড্রাইভ লিংক *</label>
+                  <input
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddLinkAttachment}
+                disabled={!linkUrl.trim()}
+                className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-400 text-white text-xs font-bold rounded-lg cursor-pointer transition select-none"
+              >
+                লিংক যুক্ত করুন
+              </button>
             </div>
 
             {/* Existing uploaded attachment pills list */}
@@ -1590,10 +1554,14 @@ export default function TransactionForm({
                       {file.name}
                     </div>
                     <div className="flex items-center gap-2 border-l border-slate-200 pl-2 shrink-0">
-                      <span className="text-[10px] text-slate-400 font-mono">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                      <span className="text-[10px] text-slate-400 font-mono italic">লিংক</span>
                       <button
                         type="button"
-                        onClick={() => openAttachmentInNewTab(file)}
+                        onClick={() => {
+                          if (file.url) {
+                            window.open(file.url, '_blank');
+                          }
+                        }}
                         className="text-teal-700 hover:text-teal-900 cursor-pointer"
                         title="ফাইলটি দেখুন"
                       >

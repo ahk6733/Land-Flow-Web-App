@@ -23,6 +23,7 @@ import SearchQuery from './components/SearchQuery';
 import OrderList from './components/OrderList';
 import Customers from './components/Customers';
 import StaffManagement from './components/StaffManagement';
+import AppUsers from './components/AppUsers';
 import AppLogo from './components/AppLogo';
 import AuthGate from './components/AuthGate';
 import UserProfile from './components/UserProfile';
@@ -182,6 +183,13 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Prevent unverified password users from auto-logging in
+        if (firebaseUser.providerData.some(p => p.providerId === 'password') && !firebaseUser.emailVerified) {
+          setCurrentUser(null);
+          setAuthInitialized(true);
+          return;
+        }
+
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
@@ -1131,7 +1139,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen font-sans text-slate-800 antialiased overflow-hidden print:h-auto print:overflow-visible print:block pb-16 md:pb-0">
+    <div className="fixed inset-0 w-full flex flex-col-reverse md:flex-row font-sans text-slate-800 antialiased overflow-hidden print:static print:h-auto print:overflow-visible print:block">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--color-main-bg)] relative print:h-auto print:overflow-visible print:block print:bg-white">
@@ -1917,6 +1925,13 @@ export default function App() {
 
         {activeTab === 'staff' && (
           <StaffManagement />
+        )}
+
+        {activeTab === 'appUsers' && (
+          <AppUsers 
+            currentUser={currentUser} 
+            setAlertConfig={setAlertConfig} 
+          />
         )}
       </main>
 
