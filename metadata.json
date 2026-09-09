@@ -1,0 +1,6 @@
+{
+  "name": "Land Buy-Sell Management System",
+  "description": "A Microsoft Access-inspired web application for land buy-sell accounts, plot and ledger-based database maintenance, deeds and documents tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
