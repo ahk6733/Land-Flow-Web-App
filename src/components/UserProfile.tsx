@@ -224,7 +224,44 @@ export default function UserProfile({
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
-        setProfileImage(event.target.result as string);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 300;
+          const MAX_HEIGHT = 300;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setProfileImage(compressedBase64);
+            
+            // Auto save profile image
+            const updated = {
+              ...currentUser,
+              profileImage: compressedBase64
+            };
+            onUpdateProfile(updated);
+            setMessage({ text: 'প্রোফাইল পিকচার সফলভাবে আপডেট করা হয়েছে!', type: 'success' });
+          }
+        };
+        img.src = event.target.result as string;
       }
     };
     reader.readAsDataURL(file);
@@ -290,10 +327,18 @@ export default function UserProfile({
         return;
       }
       
+      const newHistory = currentUser.tokenHistory || [];
+      newHistory.push({
+        amount: payload.amount,
+        date: new Date().toISOString(),
+        addedBy: 'নিজস্ব (.tok ফাইল আপলোড)'
+      });
+
       const updatedUser = {
         ...currentUser,
         tokenLimit: (currentUser.tokenLimit || 0) + payload.amount,
-        usedTokenIds: [...usedIds, payload.id]
+        usedTokenIds: [...usedIds, payload.id],
+        tokenHistory: newHistory
       };
       
       onUpdateProfile(updatedUser);

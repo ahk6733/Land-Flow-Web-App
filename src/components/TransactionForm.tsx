@@ -1055,10 +1055,9 @@ export default function TransactionForm({
             <input
               type="text"
               required
-              placeholder="যেমনঃ ৪৫১২"
               value={deedNumber}
               onChange={(e) => setDeedNumber(e.target.value)}
-              className="w-full text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
+              className="w-full text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm"
             />
           </div>
 
@@ -1072,11 +1071,10 @@ export default function TransactionForm({
               <input
                 type="text"
                 required
-                placeholder="যেমনঃ আব্দুর রহমান"
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
                 readOnly={type === 'purchase' && currentUser?.userType === 'company'}
-                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 placeholder:text-slate-400 shadow-sm ${type === 'purchase' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
+                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm ${type === 'purchase' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
               />
             </div>
           </div>
@@ -1090,11 +1088,10 @@ export default function TransactionForm({
               <input
                 type="text"
                 required
-                placeholder="যেমনঃ অনিল কুমার সেন"
                 value={sellerName}
                 onChange={(e) => setSellerName(e.target.value)}
                 readOnly={type === 'sale' && currentUser?.userType === 'company'}
-                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 placeholder:text-slate-400 shadow-sm ${type === 'sale' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
+                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm ${type === 'sale' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
               />
             </div>
           </div>

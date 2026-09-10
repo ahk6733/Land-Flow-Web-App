@@ -120,8 +120,8 @@ export default function App() {
 
   const [transactions, setTransactions] = useState<LandTransaction[]>([]);
   const [trashTransactions, setTrashTransactions] = useState<LandTransaction[]>([]);
-  const [customers, setCustomers] = useState<any[]>(INITIAL_CUSTOMERS);
-  const [orders, setOrders] = useState<any[]>(INITIAL_ORDERS);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [initialSearchQuery, setInitialSearchQuery] = useState<{ khatian?: string; dag?: string } | undefined>(undefined);
   const [showWipeModal, setShowWipeModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<LandTransaction | null>(null);
@@ -234,8 +234,12 @@ export default function App() {
         if (userDocSnap.exists()) {
           const firebaseData = userDocSnap.data().transactions || [];
           const firebaseTrashData = userDocSnap.data().trash || [];
+          const firebaseCustomersData = userDocSnap.data().customers || [];
+          const firebaseOrdersData = userDocSnap.data().orders || [];
           setTransactions(firebaseData);
           setTrashTransactions(firebaseTrashData);
+          setCustomers(firebaseCustomersData);
+          setOrders(firebaseOrdersData);
           
           // Update local DB with latest Firebase data
           try {
@@ -246,6 +250,8 @@ export default function App() {
             });
             localStorage.setItem(`LAND_LEDGER_TRANSACTIONS_${currentUser.id}`, JSON.stringify(firebaseData));
             localStorage.setItem(`LAND_LEDGER_TRASH_${currentUser.id}`, JSON.stringify(firebaseTrashData));
+            localStorage.setItem(`LAND_LEDGER_CUSTOMERS_${currentUser.id}`, JSON.stringify(firebaseCustomersData));
+            localStorage.setItem(`LAND_LEDGER_ORDERS_${currentUser.id}`, JSON.stringify(firebaseOrdersData));
           } catch (e) {
             console.error('Error syncing Firebase data to local DB:', e);
           }
@@ -269,6 +275,14 @@ export default function App() {
             const localTrashData = localStorage.getItem(`LAND_LEDGER_TRASH_${currentUser.id}`);
             if (localTrashData) {
               setTrashTransactions(JSON.parse(localTrashData));
+            }
+            const localCustomersData = localStorage.getItem(`LAND_LEDGER_CUSTOMERS_${currentUser.id}`);
+            if (localCustomersData) {
+              setCustomers(JSON.parse(localCustomersData));
+            }
+            const localOrdersData = localStorage.getItem(`LAND_LEDGER_ORDERS_${currentUser.id}`);
+            if (localOrdersData) {
+              setOrders(JSON.parse(localOrdersData));
             }
           }
           
@@ -424,6 +438,15 @@ export default function App() {
       currentUser: updatedProfile,
       registeredUsers: updatedList
     });
+
+    try {
+      if (updatedProfile && updatedProfile.id) {
+        const userRef = doc(db, 'users', updatedProfile.id);
+        await setDoc(userRef, updatedProfile, { merge: true });
+      }
+    } catch (e) {
+      console.error("Error updating profile in Firebase:", e);
+    }
   };
 
   const handleLogout = async () => {
@@ -435,6 +458,38 @@ export default function App() {
       setActiveTab('dashboard');
     } catch (e) {
       console.error('Logout error:', e);
+    }
+  };
+
+  // Save customers to LocalStorage and Firebase
+  const saveCustomersData = async (newCustomers: any[]) => {
+    setCustomers(newCustomers);
+    if (currentUser) {
+      try {
+        localStorage.setItem(`LAND_LEDGER_CUSTOMERS_${currentUser.id}`, JSON.stringify(newCustomers));
+      } catch (error) {}
+      try {
+        const userTxRef = doc(db, 'user_transactions', currentUser.id);
+        await setDoc(userTxRef, { customers: newCustomers }, { merge: true });
+      } catch (error) {
+        console.error('Error syncing customers to Firebase:', error);
+      }
+    }
+  };
+
+  // Save orders to LocalStorage and Firebase
+  const saveOrdersData = async (newOrders: any[]) => {
+    setOrders(newOrders);
+    if (currentUser) {
+      try {
+        localStorage.setItem(`LAND_LEDGER_ORDERS_${currentUser.id}`, JSON.stringify(newOrders));
+      } catch (error) {}
+      try {
+        const userTxRef = doc(db, 'user_transactions', currentUser.id);
+        await setDoc(userTxRef, { orders: newOrders }, { merge: true });
+      } catch (error) {
+        console.error('Error syncing orders to Firebase:', error);
+      }
     }
   };
 
@@ -1910,7 +1965,7 @@ export default function App() {
         {activeTab === 'order' && (
           <OrderList 
             orders={orders} 
-            setOrders={setOrders} 
+            setOrders={saveOrdersData} 
             customers={customers} 
             transactions={transactions} 
           />
@@ -1919,7 +1974,7 @@ export default function App() {
         {activeTab === 'customers' && (
           <Customers 
             customers={customers} 
-            setCustomers={setCustomers} 
+            setCustomers={saveCustomersData} 
           />
         )}
 

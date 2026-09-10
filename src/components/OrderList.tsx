@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, MoreHorizontal, FileText, ChevronRight, Plus, Trash2, Edit, Eye, X, Printer, MapPin } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, FileText, ChevronRight, ChevronDown, Plus, Trash2, Edit, Eye, X, Printer, MapPin } from 'lucide-react';
 import { LandTransaction, Customer, Order, KhatianInfo, DagInfo } from '../types';
 
 interface OrderListProps {
@@ -15,6 +15,9 @@ export default function OrderList({ orders, setOrders, customers, transactions }
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [showAdditionalCustomers, setShowAdditionalCustomers] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [scheduleSearchQuery, setScheduleSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     customerId: '',
@@ -32,6 +35,23 @@ export default function OrderList({ orders, setOrders, customers, transactions }
   const allPurchasedKhatians = transactions
     .filter(t => t.type === 'purchase')
     .flatMap(t => t.khatians.map(k => ({ ...k, _txId: t.id, _mouza: t.mouza })));
+
+  const filteredSchedules = allPurchasedKhatians.filter((kh: any) => {
+    const query = scheduleSearchQuery.toLowerCase();
+    if (!query) return true;
+    const mouzaMatch = (kh._mouza || '').toLowerCase().includes(query);
+    const khatianMatch = 
+      (kh.csKhatian || '').toLowerCase().includes(query) ||
+      (kh.saKhatian || '').toLowerCase().includes(query) ||
+      (kh.rsKhatian || '').toLowerCase().includes(query) ||
+      (kh.namjariKhatian || '').toLowerCase().includes(query);
+    const dagMatch = kh.dags?.some((d: any) => 
+      (d.csDag || '').toLowerCase().includes(query) ||
+      (d.saDag || '').toLowerCase().includes(query) ||
+      (d.rsDag || '').toLowerCase().includes(query)
+    );
+    return mouzaMatch || khatianMatch || dagMatch;
+  });
 
   const openAddModal = () => {
     setEditingOrderId(null);
@@ -75,10 +95,11 @@ export default function OrderList({ orders, setOrders, customers, transactions }
     // Copy the selected khatian into the demand schedule
     const newKhatian: KhatianInfo = {
       ...khatian,
+      _originalId: khatian.id,
       id: `kh_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // New unique ID
     };
-    setKhatians([...khatians, newKhatian]);
-    setIsScheduleModalOpen(false);
+    setKhatians(prev => [...prev, newKhatian]);
+    // Do not close the modal, allowing user to select multiple
   };
 
   const handleDagAmountChange = (khatianId: string, dagId: string, newAmount: number) => {
@@ -290,17 +311,52 @@ export default function OrderList({ orders, setOrders, customers, transactions }
                         অতিরিক্ত গ্রাহক থাকলে তার তথ্য
                       </button>
                     </div>
-                    <select 
-                      required
-                      value={formData.customerId}
-                      onChange={(e) => setFormData({...formData, customerId: e.target.value})}
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition text-sm bg-slate-50 font-medium"
-                    >
-                      <option value="">-- গ্রাহক নির্বাচন করুন --</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.phone})</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <div 
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition text-sm bg-slate-50 font-medium cursor-pointer flex justify-between items-center"
+                        onClick={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
+                      >
+                        <span className={customers.find(c => c.id === formData.customerId) ? "text-slate-900" : "text-slate-400"}>
+                          {customers.find(c => c.id === formData.customerId) ? `${customers.find(c => c.id === formData.customerId)?.name} (${customers.find(c => c.id === formData.customerId)?.phone})` : '-- গ্রাহক নির্বাচন করুন --'}
+                        </span>
+                        <ChevronDown size={16} className="text-slate-400" />
+                      </div>
+                      
+                      {isCustomerDropdownOpen && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-72 flex flex-col">
+                          <div className="p-2 border-b border-slate-100 shrink-0">
+                            <input 
+                              type="text" 
+                              placeholder="নাম বা মোবাইল নাম্বার দিয়ে খুঁজুন..." 
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+                              value={customerSearchQuery}
+                              onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="overflow-y-auto p-1">
+                            {customers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) || c.phone.includes(customerSearchQuery)).map(c => (
+                              <div 
+                                key={c.id} 
+                                className="px-3 py-2 hover:bg-indigo-50 cursor-pointer rounded-lg text-sm transition text-slate-700 flex justify-between items-center"
+                                onClick={() => {
+                                  setFormData({...formData, customerId: c.id});
+                                  setIsCustomerDropdownOpen(false);
+                                  setCustomerSearchQuery('');
+                                }}
+                              >
+                                <span className="font-bold">{c.name}</span>
+                                <span className="text-xs text-slate-500 font-mono">{c.phone}</span>
+                              </div>
+                            ))}
+                            {customers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) || c.phone.includes(customerSearchQuery)).length === 0 && (
+                              <div className="p-3 text-center text-sm text-slate-500">কোনো গ্রাহক পাওয়া যায়নি</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {showAdditionalCustomers && (
                       <div className="mt-3">
@@ -367,7 +423,10 @@ export default function OrderList({ orders, setOrders, customers, transactions }
                     <h3 className="font-bold text-slate-800">গ্রাহকের চাহিদা তফসিল</h3>
                     <button 
                       type="button"
-                      onClick={() => setIsScheduleModalOpen(true)}
+                      onClick={() => {
+                        setIsScheduleModalOpen(true);
+                        setScheduleSearchQuery('');
+                      }}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition shadow-sm cursor-pointer"
                     >
                       <Plus size={14} /> তফসিল যুক্ত করুন
@@ -473,24 +532,71 @@ export default function OrderList({ orders, setOrders, customers, transactions }
                 <X size={20} />
               </button>
             </div>
-            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-3 bg-slate-50">
+            <div className="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <Search size={16} />
+                </span>
+                <input 
+                  type="text"
+                  placeholder="মৌজা, খতিয়ান বা দাগ নম্বর দিয়ে খুঁজুন..."
+                  value={scheduleSearchQuery}
+                  onChange={(e) => setScheduleSearchQuery(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="p-4 max-h-[50vh] overflow-y-auto bg-slate-50">
               {allPurchasedKhatians.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">ক্রয়কৃত কোনো তফসিল পাওয়া যায়নি।</div>
+              ) : filteredSchedules.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">অনুসন্ধানের সাথে কোনো তফসিল মেলেনি।</div>
               ) : (
-                allPurchasedKhatians.map((kh: any, i) => (
-                  <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between hover:border-indigo-300 transition group cursor-pointer" onClick={() => handleSelectSchedule(kh)}>
-                    <div>
-                      <h4 className="font-bold text-slate-700 text-sm">মৌজা: {kh._mouza || 'অজানা'}</h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {kh.hasRS && `আর.এস খতিয়ান: ${kh.rsKhatian || '-'} `}
-                        {kh.dags?.length > 0 && `| দাগ সংখ্যা: ${kh.dags.length}`}
-                      </p>
-                    </div>
-                    <button className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold group-hover:bg-indigo-600 group-hover:text-white transition">
-                      যুক্ত করুন
-                    </button>
-                  </div>
-                ))
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                  <table className="w-full text-center text-sm">
+                    <thead className="bg-slate-100/80 text-slate-600 font-semibold text-xs border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-3">মৌজা</th>
+                        <th className="px-4 py-3">আর.এস খতিয়ান</th>
+                        <th className="px-4 py-3">নামজারী খতিয়ান</th>
+                        <th className="px-4 py-3">আর.এস দাগ</th>
+                        <th className="px-4 py-3">স্টক (শতক)</th>
+                        <th className="px-4 py-3">অ্যাকশন</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredSchedules.map((kh: any, i: number) => {
+                        const isAdded = khatians.some((k: any) => k._originalId === kh.id || k.id === kh.id);
+                        return (
+                        <tr key={i} className={`transition group ${isAdded ? 'bg-emerald-50/50' : 'hover:bg-indigo-50/50 cursor-pointer'}`} onClick={() => !isAdded && handleSelectSchedule(kh)}>
+                          <td className="px-4 py-3 font-bold text-slate-700">{kh._mouza || '-'}</td>
+                          <td className="px-4 py-3 text-slate-600">{kh.hasRS ? (kh.rsKhatian || '-') : '-'}</td>
+                          <td className="px-4 py-3 text-slate-600">{kh.hasNamjari ? (kh.namjariKhatian || '-') : '-'}</td>
+                          <td className="px-4 py-3 text-slate-600 font-medium">
+                            {kh.dags?.length > 0 ? kh.dags.filter((d:any) => d.hasRS && d.rsDag).map((d: any) => d.rsDag).join(', ') : '-'}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-indigo-600">
+                            {kh.dags?.reduce((sum: number, d: any) => sum + (Number(d.amount) || 0), 0) || 0}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button 
+                              disabled={isAdded}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                                isAdded 
+                                  ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed' 
+                                  : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
+                              }`}
+                            >
+                              {isAdded ? 'যুক্ত হয়েছে ✓' : 'যুক্ত করুন'}
+                            </button>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </div>

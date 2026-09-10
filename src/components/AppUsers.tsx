@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Users, Search, PlusCircle, Trash2, Calendar, Mail, Phone, ShieldCheck, ShieldAlert, KeyRound, Building2 } from 'lucide-react';
+import { Users, Search, PlusCircle, MinusCircle, Trash2, Calendar, Mail, Phone, ShieldCheck, ShieldAlert, KeyRound, Building2, Key, X, Info } from 'lucide-react';
 
 interface AppUsersProps {
   currentUser: any;
@@ -14,8 +14,12 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [tokenAmount, setTokenAmount] = useState<number | ''>('');
+  const [tokenAction, setTokenAction] = useState<'add'|'deduct'>('add');
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userCounts, setUserCounts] = useState<Record<string, number>>({});
+  const [showHistoryUserId, setShowHistoryUserId] = useState<string | null>(null);
+  const historyUser = users.find(u => u.id === showHistoryUserId);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -23,9 +27,43 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
       const fetchedUsers: any[] = [];
-      snapshot.forEach((doc) => {
-        fetchedUsers.push({ id: doc.id, ...doc.data() });
-      });
+      const counts: Record<string, number> = {};
+
+      for (const docSnapshot of snapshot.docs) {
+        const userData = { id: docSnapshot.id, ...docSnapshot.data() };
+        fetchedUsers.push(userData);
+
+        let txCount = 0;
+        try {
+          const txRef = doc(db, 'user_transactions', docSnapshot.id);
+          const txSnap = await getDoc(txRef);
+          if (txSnap.exists()) {
+             txCount = (txSnap.data().transactions || []).length;
+          } else {
+             if ((window as any).electronAPI) {
+                const data = await (window as any).electronAPI.loadDb(docSnapshot.id);
+                txCount = data ? data.length : 0;
+             } else {
+                const rawData = localStorage.getItem(`LAND_LEDGER_TRANSACTIONS_${docSnapshot.id}`);
+                if (rawData) {
+                  try { txCount = JSON.parse(rawData).length; } catch(e){}
+                }
+             }
+          }
+        } catch(e) {
+           if ((window as any).electronAPI) {
+              const data = await (window as any).electronAPI.loadDb(docSnapshot.id);
+              txCount = data ? data.length : 0;
+           } else {
+              const rawData = localStorage.getItem(`LAND_LEDGER_TRANSACTIONS_${docSnapshot.id}`);
+              if (rawData) {
+                try { txCount = JSON.parse(rawData).length; } catch(e){}
+              }
+           }
+        }
+        counts[docSnapshot.id] = txCount;
+      }
+
       // Sort by creation date
       fetchedUsers.sort((a, b) => {
         const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
@@ -33,6 +71,7 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
         return dateB - dateA; // descending
       });
       setUsers(fetchedUsers);
+      setUserCounts(counts);
     } catch (error) {
       console.error("Error fetching users:", error);
       setAlertConfig({ message: 'ইউজারদের তালিকা লোড করতে সমস্যা হয়েছে।', type: 'error' });
@@ -53,20 +92,31 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
       const userRef = doc(db, 'users', selectedUser.id);
       
       const newHistory = selectedUser.tokenHistory || [];
-      newHistory.push({
-        amount: amount,
-        date: new Date().toISOString(),
-        addedBy: currentUser.name
-      });
-      
-      const newLimit = (selectedUser.tokenLimit || 0) + amount;
+      let newLimit = selectedUser.tokenLimit || 0;
+
+      if (tokenAction === 'add') {
+        newLimit += amount;
+        newHistory.push({
+          amount: amount,
+          date: new Date().toISOString(),
+          addedBy: currentUser.name
+        });
+      } else {
+        newLimit -= amount;
+        if (newLimit < 0) newLimit = 0;
+        newHistory.push({
+          amount: -amount,
+          date: new Date().toISOString(),
+          addedBy: currentUser.name
+        });
+      }
       
       await setDoc(userRef, {
         tokenLimit: newLimit,
         tokenHistory: newHistory
       }, { merge: true });
       
-      setAlertConfig({ message: `${selectedUser.name}-এর একাউন্টে ${amount} টি টোকেন যুক্ত করা হয়েছে!`, type: 'success' });
+      setAlertConfig({ message: `${selectedUser.name}-এর একাউন্টে ${amount} টি টোকেন ${tokenAction === 'add' ? 'যুক্ত' : 'কমানো'} করা হয়েছে!`, type: 'success' });
       setShowTokenModal(false);
       setSelectedUser(null);
       setTokenAmount('');
@@ -168,14 +218,16 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                 <th className="px-6 py-4">যোগাযোগ</th>
                 <th className="px-6 py-4">ধরন</th>
                 <th className="px-6 py-4">রেজিস্ট্রেশন তারিখ</th>
-                <th className="px-6 py-4 text-center">টোকেন ব্যালেন্স</th>
+                <th className="px-6 py-4 text-center">মোট টোকেন</th>
+                <th className="px-6 py-4 text-center">খরচ হয়েছে</th>
+                <th className="px-6 py-4 text-center">বাকি আছে</th>
                 <th className="px-6 py-4 text-right">অ্যাকশন</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                       <p>ডেটা লোড হচ্ছে...</p>
@@ -184,7 +236,7 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">কোন ইউজার পাওয়া যায়নি।</td>
+                  <td colSpan={8} className="px-6 py-8 text-center text-slate-500">কোন ইউজার পাওয়া যায়নি।</td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
@@ -225,18 +277,44 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 bg-indigo-50 text-indigo-700 font-bold border border-indigo-100 rounded-full text-xs">
-                        {toBn(user.tokenLimit || 0)} টি
+                      <span className="text-xs text-indigo-700 font-bold bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                        {toBn(user.tokenLimit || 0)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-xs text-rose-700 font-bold bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                        {toBn(userCounts[user.id] || 0)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                        (user.tokenLimit || 0) - (userCounts[user.id] || 0) <= 0 ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      }`}>
+                        {toBn(Math.max(0, (user.tokenLimit || 0) - (userCounts[user.id] || 0)))}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => { setSelectedUser(user); setShowTokenModal(true); }}
+                          onClick={() => setShowHistoryUserId(user.id)}
+                          className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-colors cursor-pointer border border-indigo-100"
+                          title="টোকেন হিস্ট্রি"
+                        >
+                          <Info size={16} />
+                        </button>
+                        <button
+                          onClick={() => { setSelectedUser(user); setTokenAction('add'); setShowTokenModal(true); }}
                           className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors cursor-pointer border border-emerald-100"
                           title="টোকেন যুক্ত করুন"
                         >
                           <PlusCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => { setSelectedUser(user); setTokenAction('deduct'); setShowTokenModal(true); }}
+                          className="p-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg transition-colors cursor-pointer border border-orange-100"
+                          title="টোকেন কমান"
+                        >
+                          <MinusCircle size={16} />
                         </button>
                         {!user.isAdmin && (
                           <button
@@ -262,12 +340,12 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white border border-slate-100 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
             <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${tokenAction === 'add' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
                 <KeyRound size={24} />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">টোকেন যুক্ত করুন</h3>
+              <h3 className="text-lg font-bold text-slate-800">টোকেন {tokenAction === 'add' ? 'যুক্ত করুন' : 'কমান'}</h3>
               <p className="text-xs text-slate-500 mt-1">
-                <strong className="text-slate-800">{selectedUser.name}</strong>-এর জন্য কতগুলো নতুন টোকেন যুক্ত করতে চান?
+                <strong className="text-slate-800">{selectedUser.name}</strong>-এর জন্য কতগুলো টোকেন {tokenAction === 'add' ? 'যুক্ত করতে' : 'কমাতে'} চান?
               </p>
             </div>
             
@@ -278,7 +356,7 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                   type="number" 
                   value={tokenAmount}
                   onChange={(e) => setTokenAmount(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-center font-bold"
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-1 text-center font-bold ${tokenAction === 'add' ? 'focus:border-emerald-500 focus:ring-emerald-500' : 'focus:border-orange-500 focus:ring-orange-500'}`}
                   placeholder="যেমন: ৫০"
                   min="1"
                 />
@@ -294,9 +372,9 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                 <button 
                   onClick={handleAddTokens}
                   disabled={!tokenAmount || Number(tokenAmount) <= 0}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50 cursor-pointer shadow-sm"
+                  className={`flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 cursor-pointer shadow-sm ${tokenAction === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}
                 >
-                  যুক্ত করুন
+                  {tokenAction === 'add' ? 'যুক্ত করুন' : 'কমান'}
                 </button>
               </div>
             </div>
@@ -330,6 +408,77 @@ export default function AppUsers({ currentUser, setAlertConfig }: AppUsersProps)
                 className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 transition cursor-pointer shadow-sm"
               >
                 ডিলিট করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Token History Modal */}
+      {showHistoryUserId && historyUser && (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+              <h3 className="text-slate-900 font-sans font-extrabold text-lg flex items-center gap-2">
+                <Key className="text-indigo-600" size={20} />
+                টোকেন হিস্ট্রি: {historyUser.name}
+              </h3>
+              <button 
+                onClick={() => setShowHistoryUserId(null)}
+                className="text-slate-400 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 p-1.5 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider mb-1">মোট টোকেন লিমিট</span>
+                <span className="text-2xl font-black text-indigo-700">{toBn(historyUser.tokenLimit || 0)}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col items-center justify-center text-center">
+                <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">বর্তমানে বাকি আছে</span>
+                <span className="text-2xl font-black text-emerald-700">
+                  {toBn(Math.max(0, (historyUser.tokenLimit || 0) - (userCounts[historyUser.id] || 0)))}
+                </span>
+              </div>
+            </div>
+
+            <h4 className="text-xs font-bold text-slate-700 uppercase mb-3">টোকেন রিচার্জ হিস্ট্রি</h4>
+            
+            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
+              {historyUser.tokenHistory && historyUser.tokenHistory.length > 0 ? (
+                historyUser.tokenHistory.slice().reverse().map((entry: any, index: number) => (
+                  <div key={index} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <div>
+                      <div className={`text-sm font-bold ${entry.amount > 0 ? 'text-emerald-700' : 'text-orange-700'}`}>
+                        {entry.amount > 0 ? '+' : '-'}{toBn(Math.abs(entry.amount))} টোকেন {entry.amount > 0 ? 'যুক্ত হয়েছে' : 'কমানো হয়েছে'}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">অ্যাকশন করেছেন: {entry.addedBy}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-bold text-slate-600">
+                        {new Date(entry.date).toLocaleDateString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {toBn(new Date(entry.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-slate-500 text-sm font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  কোনো টোকেন হিস্ট্রি পাওয়া যায়নি
+                </div>
+              )}
+            </div>
+            
+            <div className="pt-5 mt-3 flex justify-end">
+              <button
+                onClick={() => setShowHistoryUserId(null)}
+                className="text-white bg-slate-800 hover:bg-slate-900 px-5 py-2.5 rounded-xl transition-colors font-bold text-sm cursor-pointer"
+              >
+                বন্ধ করুন
               </button>
             </div>
           </div>
