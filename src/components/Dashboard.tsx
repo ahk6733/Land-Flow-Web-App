@@ -3,7 +3,7 @@ import { LandTransaction } from '../types';
 import { analyzeLandData } from '../utils/landAnalyzer';
 import { toBengaliNumber } from '../data/defaultData';
 import { 
-  Plus, MoreHorizontal, Search, Filter, ArrowUpDown, Edit2, Trash2, MoreVertical, ChevronRight, Tag, Receipt, Wallet, Building, ExternalLink, BarChart3, PlusCircle, MinusCircle
+  Plus, MoreHorizontal, Search, Filter, ArrowUpDown, Edit2, Trash2, MoreVertical, ChevronRight, Tag, Receipt, Wallet, Building, ExternalLink, BarChart3, PlusCircle, MinusCircle, X, Printer, FileText
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -32,6 +32,7 @@ export default function Dashboard({
   onAddPurchase,
   onAddSale
 }: DashboardProps) {
+  const [viewTx, setViewTx] = useState<LandTransaction | null>(null);
   const analysis = analyzeLandData(transactions);
   
   // Calculate top summary stats
@@ -268,58 +269,58 @@ export default function Dashboard({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="table-auto min-w-full text-center text-sm whitespace-nowrap border-collapse">
             <thead>
-              <tr className="text-slate-400 font-medium border-y border-slate-100 text-xs bg-slate-50/50">
-                <th className="py-3 px-6">সিরিয়াল নাম্বার</th>
-                <th className="py-3 px-6">ক্রেতা</th>
-                <th className="py-3 px-6">বিক্রেতা</th>
-                <th className="py-3 px-6">দলিল নাম্বার</th>
-                <th className="py-3 px-6">তারিখ</th>
-                <th className="py-3 px-6">দলিলের প্রকৃতি</th>
-                <th className="py-3 px-6">মৌজার নাম</th>
-                <th className="py-3 px-6">হস্তান্তরিত পরিমান</th>
-                <th className="py-3 px-6">ধরণ</th>
-                <th className="py-3 px-6 text-center">অ্যাকশন</th>
+              <tr className="text-indigo-800 font-extrabold text-[13px] bg-indigo-100/80">
+                <th className="py-2.5 px-4 text-center border border-indigo-200">#</th>
+                <th className="py-2.5 px-4 border border-indigo-200">ক্রেতা</th>
+                <th className="py-2.5 px-4 border border-indigo-200">বিক্রেতা</th>
+                <th className="py-2.5 px-4 border border-indigo-200">দলিল নাম্বার</th>
+                <th className="py-2.5 px-4 border border-indigo-200">তারিখ</th>
+                <th className="py-2.5 px-4 border border-indigo-200">দলিলের প্রকৃতি</th>
+                <th className="py-2.5 px-4 border border-indigo-200">মৌজার নাম</th>
+                <th className="py-2.5 px-4 border border-indigo-200">হস্তান্তরিত পরিমান</th>
+                <th className="py-2.5 px-4 border border-indigo-200">ধরণ</th>
+                <th className="py-2.5 px-4 text-center border border-indigo-200">অ্যাকশন</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="bg-slate-50/50">
               {transactions.slice(0, 5).map((t, idx) => (
-                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-6 text-slate-500 font-medium text-xs text-center">{toBengaliNumber(idx + 1)}</td>
-                  <td className="py-4 px-6 text-slate-700 font-medium text-sm">{t.buyerName}</td>
-                  <td className="py-4 px-6 text-slate-700 font-medium text-sm">{t.sellerName}</td>
-                  <td className="py-4 px-6 text-slate-800 font-bold text-sm">{toBengaliNumber(t.deedNumber)}</td>
-                  <td className="py-4 px-6 text-slate-500 text-xs">{toBengaliNumber(t.date)}</td>
-                  <td className="py-4 px-6 text-slate-600 font-medium text-xs">{t.deedNature || '-'}</td>
-                  <td className="py-4 px-6 text-slate-700 font-semibold text-sm">{t.mouza}</td>
-                  <td className="py-4 px-6 font-bold text-slate-800">{toBengaliNumber(t.transactionAmount)} <span className="text-[10px] text-slate-400 font-normal">শতক</span></td>
-                  <td className="py-4 px-6">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${t.type === 'purchase' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                <tr 
+                  key={t.id} 
+                  className="hover:bg-indigo-50/60 transition-colors cursor-pointer group"
+                  onClick={() => setViewTx(t)}
+                >
+                  <td className="py-3 px-4 text-slate-500 font-bold text-xs text-center border border-slate-200">{toBengaliNumber(idx + 1)}</td>
+                  <td className="py-3 px-4 text-slate-700 font-bold text-[13px] border border-slate-200">{t.buyerName}</td>
+                  <td className="py-3 px-4 text-slate-700 font-bold text-[13px] border border-slate-200">{t.sellerName}</td>
+                  <td className="py-3 px-4 text-slate-800 font-black text-[13px] border border-slate-200">{toBengaliNumber(t.deedNumber)}</td>
+                  <td className="py-3 px-4 text-slate-500 text-xs font-semibold border border-slate-200">{toBengaliNumber(t.date)}</td>
+                  <td className="py-3 px-4 text-slate-600 font-bold text-xs border border-slate-200">{t.deedNature || '-'}</td>
+                  <td className="py-3 px-4 text-slate-700 font-extrabold text-[13px] border border-slate-200">{t.mouza}</td>
+                  <td className="py-3 px-4 font-black text-slate-800 text-[13px] border border-slate-200">{toBengaliNumber(t.transactionAmount)} <span className="text-[10px] text-slate-500 font-bold">শতক</span></td>
+                  <td className="py-3 px-4 border border-slate-200">
+                    <span className={`px-2 py-1 rounded text-[10px] font-black tracking-wide ${t.type === 'purchase' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {t.type === 'purchase' ? 'ক্রয়' : 'বিক্রয়'}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-center">
+                  <td className="py-3 px-4 text-center border border-slate-200">
                     <button 
-                      onClick={() => {
-                        onHighlightTransaction(t.id);
-                        onNavigateToTab(t.type);
-                        setTimeout(() => {
-                          const el = document.getElementById(`tx-${t.id}`);
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 100);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewTx(t);
                       }}
-                      className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer p-1.5 hover:bg-indigo-50 rounded-lg"
+                      className="text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer p-1.5 hover:bg-indigo-100 rounded-md"
                       title="বিস্তারিত দেখুন"
                     >
-                      <ExternalLink size={16} />
+                      <ExternalLink size={15} />
                     </button>
                   </td>
                 </tr>
               ))}
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={10} className="py-12 text-center text-slate-400 font-semibold text-sm border border-slate-200">
                     কোনো ডাটা পাওয়া যায়নি
                   </td>
                 </tr>
@@ -328,6 +329,114 @@ export default function Dashboard({
           </table>
         </div>
       </div>
+      {viewTx && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <FileText className="text-indigo-600" size={20} /> 
+                দলিলের বিস্তারিত তথ্য
+              </h2>
+              <button onClick={() => setViewTx(null)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition cursor-pointer">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto bg-white flex-1">
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">গ্রহীতা / ক্রেতা</span>
+                  <span className="text-base font-extrabold text-slate-800">{viewTx.buyerName}</span>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <span className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">দাতা / বিক্রেতা</span>
+                  <span className="text-base font-extrabold text-slate-800">{viewTx.sellerName}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">দলিল নাম্বার</span>
+                  <span className="font-extrabold text-slate-700">{toBengaliNumber(viewTx.deedNumber)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">তারিখ</span>
+                  <span className="font-bold text-slate-700">{toBengaliNumber(viewTx.date)}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">দলিলের প্রকৃতি</span>
+                  <span className="font-bold text-slate-700">{viewTx.deedNature || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">মৌজা</span>
+                  <span className="font-extrabold text-indigo-700">{viewTx.mouza}</span>
+                </div>
+              </div>
+
+              <div className="border border-indigo-100 rounded-xl overflow-hidden mb-6">
+                <div className="bg-indigo-50/50 px-4 py-2 border-b border-indigo-100 flex justify-between items-center">
+                  <span className="font-bold text-indigo-900 text-sm">তফসিল সমূহ</span>
+                  <span className="font-black text-indigo-700 text-sm">মোট: {toBengaliNumber(viewTx.transactionAmount)} শতক</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  {viewTx.khatians.map((k, i) => (
+                    <div key={k.id} className="text-sm">
+                      <div className="font-bold text-slate-700 mb-1">তফসিল {toBengaliNumber(i + 1)}</div>
+                      <div className="text-xs text-slate-600 mb-2">
+                        {k.hasCS && <span className="mr-3">সি.এস: <span className="font-bold">{k.csKhatian}</span></span>}
+                        {k.hasSA && <span className="mr-3">এস.এ: <span className="font-bold">{k.saKhatian}</span></span>}
+                        {k.hasRS && <span className="mr-3">আর.এস: <span className="font-bold">{k.rsKhatian}</span></span>}
+                        {k.hasNamjari && <span>নামজারি: <span className="font-bold">{k.namjariKhatian}</span></span>}
+                      </div>
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-500">
+                          <tr>
+                            <th className="py-1 px-2 border border-slate-100">সি.এস দাগ</th>
+                            <th className="py-1 px-2 border border-slate-100">এস.এ দাগ</th>
+                            <th className="py-1 px-2 border border-slate-100">আর.এস দাগ</th>
+                            <th className="py-1 px-2 border border-slate-100 text-right">পরিমান</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {k.dags.map(d => (
+                            <tr key={d.id}>
+                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasCS ? d.csDag : '-'}</td>
+                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasSA ? d.saDag : '-'}</td>
+                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasRS ? d.rsDag : '-'}</td>
+                              <td className="py-1 px-2 border border-slate-100 text-right font-bold">{toBengaliNumber(d.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+              <button 
+                onClick={() => {
+                  setViewTx(null);
+                  onEditTransaction(viewTx);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg font-bold transition shadow-sm cursor-pointer"
+              >
+                <Edit2 size={16} /> Edit
+              </button>
+              <button 
+                onClick={() => {
+                  setViewTx(null);
+                  onPrintTransaction(viewTx);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition shadow-sm shadow-indigo-200 cursor-pointer"
+              >
+                <Printer size={16} /> Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   );

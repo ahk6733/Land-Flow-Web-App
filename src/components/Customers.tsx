@@ -392,8 +392,8 @@ export default function Customers({ customers, setCustomers }: CustomersProps) {
 
       {/* Add Customer Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in print:hidden">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in print:hidden">
+          <div className="bg-white rounded-none md:rounded-2xl shadow-xl w-full max-w-4xl h-full md:h-auto max-h-screen md:max-h-[90vh] overflow-x-hidden overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingCustomerId ? 'গ্রাহকের তথ্য ইডিট করুন' : 'নতুন গ্রাহক যুক্ত করুন'}

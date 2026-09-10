@@ -1205,6 +1205,7 @@ export default function App() {
           onGoBack={handleGoBack}
           onProfileClick={() => setActiveTab('profile')}
           onTrashClick={() => setActiveTab('trash')}
+          onHomeClick={() => setActiveTab('dashboard')}
           onSync={async () => {
             setIsSyncing(true);
             try {
@@ -1282,8 +1283,8 @@ export default function App() {
         {activeTab === 'purchase' && (
           <>
             {(isAddingPurchase || (editingTransaction && editingTransaction.type === 'purchase')) && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-                <div className="bg-emerald-50 rounded-2xl border border-emerald-200 shadow-2xl p-6 space-y-6 w-full max-w-5xl my-8 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 md:p-4 overflow-hidden md:overflow-y-auto">
+                <div className="bg-emerald-50 rounded-none md:rounded-2xl border-0 md:border md:border-emerald-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
                   <TransactionForm 
                     type="purchase" 
                     onSave={handleSaveTransaction} 
@@ -1618,8 +1619,8 @@ export default function App() {
         {activeTab === 'sale' && (
           <>
             {(isAddingSale || (editingTransaction && editingTransaction.type === 'sale')) && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-                <div className="bg-rose-50 rounded-2xl border border-rose-200 shadow-2xl p-6 space-y-6 w-full max-w-5xl my-8 relative animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 md:p-4 overflow-hidden md:overflow-y-auto">
+                <div className="bg-rose-50 rounded-none md:rounded-2xl border-0 md:border md:border-rose-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
                   <TransactionForm 
                     type="sale" 
                     onSave={handleSaveTransaction} 

@@ -73,13 +73,13 @@ export default function Sidebar({ activeTab, setActiveTab, currentUser }: Sideba
               onClick={() => setActiveTab(item.id)}
               className={`cursor-pointer max-md:flex-1 w-full flex flex-col md:flex-row items-center justify-center md:justify-start ${isExpanded ? 'md:px-4 md:py-3' : 'md:justify-center md:p-3'} md:rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive 
-                  ? 'text-indigo-400 md:bg-[var(--color-sidebar-active)] md:text-white' 
-                  : 'text-slate-400 hover:bg-[var(--color-sidebar-hover)] hover:text-slate-200'
+                  ? 'max-md:text-emerald-400 text-indigo-400 md:bg-[var(--color-sidebar-active)] md:text-white' 
+                  : 'max-md:text-white text-slate-400 hover:bg-[var(--color-sidebar-hover)] hover:text-slate-200'
               } py-2 md:py-0`}
               title={item.label}
             >
               <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3 w-full md:w-auto">
-                <Icon size={24} className={`shrink-0 md:size-${isExpanded ? '18' : '22'} ${isActive ? 'text-indigo-400 md:text-white' : 'text-slate-500'}`} />
+                <Icon size={24} className={`shrink-0 md:size-${isExpanded ? '18' : '22'} ${isActive ? 'max-md:text-emerald-400 text-indigo-400 md:text-white' : 'max-md:text-white text-slate-500'}`} />
                 <span className={`hidden md:text-sm whitespace-nowrap ${isExpanded ? 'md:block' : 'md:hidden'}`}>{item.label}</span>
               </div>
               <span className={`hidden md:block ml-auto text-[10px] ${isActive ? 'text-indigo-400' : 'text-slate-600'} ${isExpanded ? 'block' : 'hidden'}`}>

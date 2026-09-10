@@ -1051,6 +1051,32 @@ export default function TransactionForm({
           </div>
 
           <div className="space-y-1.5">
+            <label className="text-slate-700 font-bold text-xs md:text-sm">দলিলের প্রকৃতি</label>
+            <div className="flex gap-1 pt-0.5">
+              <select
+                value={deedNature}
+                onChange={(e) => handleDeedNatureChange(e.target.value)}
+                className={`${showCustomDeedNature ? 'w-1/2' : 'w-full'} text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm`}
+              >
+                {uniqueDeedNatures.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+                <option value="custom">নতুন ধরণ লিখুন...</option>
+              </select>
+              {showCustomDeedNature && (
+                <input
+                  type="text"
+                  placeholder="লিখুন..."
+                  value={customDeedNature}
+                  onChange={(e) => setCustomDeedNature(e.target.value)}
+                  className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Row 2 */}
+          <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">দলিল নম্বর (আবশ্যক)</label>
             <input
               type="text"
@@ -1061,7 +1087,6 @@ export default function TransactionForm({
             />
           </div>
 
-          {/* Row 2 */}
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">ভূমি গ্রহীতা / ক্রেতা নাম (Buyer)</label>
             <div className="relative">
@@ -1079,6 +1104,7 @@ export default function TransactionForm({
             </div>
           </div>
 
+          {/* Row 3 */}
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">ভূমি দাতা / বিক্রেতা নাম (Seller)</label>
             <div className="relative">
@@ -1096,7 +1122,6 @@ export default function TransactionForm({
             </div>
           </div>
 
-          {/* Row 3 */}
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm flex items-center gap-1.5"><MapPin size={15} className="text-emerald-600"/> মৌজার নাম নির্বাচন করুন</label>
             <div className="flex gap-1 pt-0.5">
@@ -1119,31 +1144,6 @@ export default function TransactionForm({
                   placeholder="নতুন মৌজার নাম..."
                   value={customMouza}
                   onChange={(e) => setCustomMouza(e.target.value)}
-                  className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-slate-700 font-bold text-xs md:text-sm">দলিলের প্রকৃতি</label>
-            <div className="flex gap-1 pt-0.5">
-              <select
-                value={deedNature}
-                onChange={(e) => handleDeedNatureChange(e.target.value)}
-                className={`${showCustomDeedNature ? 'w-1/2' : 'w-full'} text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm`}
-              >
-                {uniqueDeedNatures.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-                <option value="custom">নতুন ধরণ লিখুন...</option>
-              </select>
-              {showCustomDeedNature && (
-                <input
-                  type="text"
-                  placeholder="লিখুন..."
-                  value={customDeedNature}
-                  onChange={(e) => setCustomDeedNature(e.target.value)}
                   className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
                 />
               )}
@@ -1350,7 +1350,7 @@ export default function TransactionForm({
                       <div className="absolute -left-[37px] top-6 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm z-10 hidden md:block"></div>
                       
                       {/* Checkboxes for dag */}
-                      <div className="xl:col-span-7 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <div className="xl:col-span-7 grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4">
                         {/* CS */}
                         <div className="flex items-center gap-1.5 p-1 border border-slate-200 rounded bg-slate-50/50">
                           <input
@@ -1428,8 +1428,8 @@ export default function TransactionForm({
                       </div>
 
                       {/* Amounts */}
-                      <div className="xl:col-span-5 grid grid-cols-7 gap-2">
-                        <div className="col-span-2">
+                      <div className="xl:col-span-5 grid grid-cols-1 md:grid-cols-7 gap-2 md:gap-4 mt-2 md:mt-0">
+                        <div className="md:col-span-2">
                           <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">মোট পরিমান(শ.)</label>
                           <input
                             type="number"
@@ -1441,7 +1441,7 @@ export default function TransactionForm({
                           />
                         </div>
                         
-                        <div className="col-span-2">
+                        <div className="md:col-span-2">
                           <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                             {kh.hasNamjari ? 'নামজারীকৃত(শ.)' : 'কাতে পরিমান(শ.)'}
                           </label>
@@ -1462,7 +1462,7 @@ export default function TransactionForm({
                           />
                         </div>
 
-                        <div className="col-span-2">
+                        <div className="md:col-span-2">
                           <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                             {type === 'purchase' ? 'ক্রয়কৃত(শ.)' : 'বিক্রীত(শ.)'}
                           </label>
@@ -1476,7 +1476,7 @@ export default function TransactionForm({
                           />
                         </div>
 
-                        <div className="col-span-1 flex items-end">
+                        <div className="md:col-span-1 flex items-end justify-end md:justify-start">
                           <button
                             type="button"
                             onClick={() => handleRemoveDag(kh.id, dag.id)}

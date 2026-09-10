@@ -114,6 +114,22 @@ export default function OrderList({ orders, setOrders, customers, transactions }
     }));
   };
 
+  const handleKhatianChange = (khatianId: string, field: string, value: string) => {
+    setKhatians(khatians.map(k => k.id === khatianId ? { ...k, [field]: value } : k));
+  };
+
+  const handleDagChange = (khatianId: string, dagId: string, field: string, value: string) => {
+    setKhatians(khatians.map(k => {
+      if (k.id === khatianId) {
+        return {
+          ...k,
+          dags: k.dags.map(d => d.id === dagId ? { ...d, [field]: value } : d)
+        };
+      }
+      return k;
+    }));
+  };
+
   const removeKhatian = (id: string) => {
     setKhatians(khatians.filter(k => k.id !== id));
   };
@@ -284,8 +300,8 @@ export default function OrderList({ orders, setOrders, customers, transactions }
 
       {/* Add / Edit Order Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[50] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:hidden">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[50] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:hidden">
+          <div className="bg-white rounded-none md:rounded-2xl shadow-xl w-full max-w-4xl h-full md:h-auto max-h-screen md:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingOrderId ? 'অর্ডার ইডিট করুন' : 'নতুন অর্ডার তৈরি করুন'}
@@ -445,16 +461,19 @@ export default function OrderList({ orders, setOrders, customers, transactions }
                             <button 
                               type="button"
                               onClick={() => removeKhatian(k.id)}
-                              className="absolute top-4 right-4 text-rose-500 hover:bg-rose-50 p-1.5 rounded-md transition cursor-pointer"
+                              className="absolute top-4 right-4 text-rose-500 hover:bg-rose-50 p-1.5 rounded-md transition cursor-pointer z-10"
                             >
                               <Trash2 size={16} />
                             </button>
-                            <h4 className="font-bold text-slate-700 text-sm mb-3 border-b border-slate-100 pb-2">তফসিল {idx + 1}</h4>
+                            <div className="border-b border-slate-100 mb-4 pb-3 relative">
+                              <h4 className="font-bold text-slate-700 text-sm absolute top-0 left-0">তফসিল {idx + 1}</h4>
+                              <div className="text-center font-extrabold text-indigo-700 text-[15px] pt-1">{k._mouza ? `মৌজা: ${k._mouza}` : 'মৌজা: -'}</div>
+                            </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                              {k.hasCS && <div><span className="text-slate-400 text-xs block">সি.এস খতিয়ান:</span><span className="font-bold text-slate-700">{k.csKhatian || '-'}</span></div>}
-                              {k.hasSA && <div><span className="text-slate-400 text-xs block">এস.এ খতিয়ান:</span><span className="font-bold text-slate-700">{k.saKhatian || '-'}</span></div>}
-                              {k.hasRS && <div><span className="text-slate-400 text-xs block">আর.এস খতিয়ান:</span><span className="font-bold text-slate-700">{k.rsKhatian || '-'}</span></div>}
-                              {k.hasNamjari && <div><span className="text-slate-400 text-xs block">নামজারি খতিয়ান:</span><span className="font-bold text-slate-700">{k.namjariKhatian || '-'}</span></div>}
+                              {k.hasCS && <div><span className="text-slate-400 text-xs block mb-1">সি.এস খতিয়ান:</span><input type="text" value={k.csKhatian || ''} onChange={(e) => handleKhatianChange(k.id, 'csKhatian', e.target.value)} className="w-full font-bold text-slate-700 px-2 py-1.5 border border-indigo-200 rounded focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /></div>}
+                              {k.hasSA && <div><span className="text-slate-400 text-xs block mb-1">এস.এ খতিয়ান:</span><input type="text" value={k.saKhatian || ''} onChange={(e) => handleKhatianChange(k.id, 'saKhatian', e.target.value)} className="w-full font-bold text-slate-700 px-2 py-1.5 border border-indigo-200 rounded focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /></div>}
+                              {k.hasRS && <div><span className="text-slate-400 text-xs block mb-1">আর.এস খতিয়ান:</span><input type="text" value={k.rsKhatian || ''} onChange={(e) => handleKhatianChange(k.id, 'rsKhatian', e.target.value)} className="w-full font-bold text-slate-700 px-2 py-1.5 border border-indigo-200 rounded focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /></div>}
+                              {k.hasNamjari && <div><span className="text-slate-400 text-xs block mb-1">নামজারি খতিয়ান:</span><input type="text" value={k.namjariKhatian || ''} onChange={(e) => handleKhatianChange(k.id, 'namjariKhatian', e.target.value)} className="w-full font-bold text-slate-700 px-2 py-1.5 border border-indigo-200 rounded focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /></div>}
                             </div>
                             
                             {k.dags && k.dags.length > 0 && (
@@ -471,9 +490,15 @@ export default function OrderList({ orders, setOrders, customers, transactions }
                                   <tbody className="divide-y divide-indigo-50">
                                     {k.dags.map(dag => (
                                       <tr key={dag.id}>
-                                        <td className="px-3 py-2">{dag.hasCS ? dag.csDag : '-'}</td>
-                                        <td className="px-3 py-2">{dag.hasSA ? dag.saDag : '-'}</td>
-                                        <td className="px-3 py-2 font-medium">{dag.hasRS ? dag.rsDag : '-'}</td>
+                                        <td className="px-3 py-2">
+                                          {dag.hasCS ? <input type="text" value={dag.csDag || ''} onChange={(e) => handleDagChange(k.id, dag.id, 'csDag', e.target.value)} className="w-16 sm:w-20 px-1.5 py-1 border border-indigo-200 rounded text-slate-700 focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /> : '-'}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                          {dag.hasSA ? <input type="text" value={dag.saDag || ''} onChange={(e) => handleDagChange(k.id, dag.id, 'saDag', e.target.value)} className="w-16 sm:w-20 px-1.5 py-1 border border-indigo-200 rounded text-slate-700 focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /> : '-'}
+                                        </td>
+                                        <td className="px-3 py-2 font-medium">
+                                          {dag.hasRS ? <input type="text" value={dag.rsDag || ''} onChange={(e) => handleDagChange(k.id, dag.id, 'rsDag', e.target.value)} className="w-16 sm:w-20 px-1.5 py-1 border border-indigo-200 rounded text-slate-700 focus:outline-none focus:border-indigo-500 bg-white" placeholder="-" /> : '-'}
+                                        </td>
                                         <td className="px-3 py-2 text-right">
                                           <input 
                                             type="number" 

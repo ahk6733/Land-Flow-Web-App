@@ -10,9 +10,10 @@ interface TopHeaderProps {
   onSync?: () => void;
   isSyncing?: boolean;
   onTrashClick?: () => void;
+  onHomeClick?: () => void;
 }
 
-export default function TopHeader({ currentUser, onLogout, canGoBack, onGoBack, onProfileClick, onSync, isSyncing = false, onTrashClick }: TopHeaderProps) {
+export default function TopHeader({ currentUser, onLogout, canGoBack, onGoBack, onProfileClick, onSync, isSyncing = false, onTrashClick, onHomeClick }: TopHeaderProps) {
   const isCompany = currentUser?.userType === 'company';
   const headerTitle = isCompany && currentUser?.companyName 
     ? currentUser.companyName 
@@ -46,7 +47,7 @@ export default function TopHeader({ currentUser, onLogout, canGoBack, onGoBack, 
             <ArrowLeft size={18} />
           </button>
         )}
-        <div className="flex items-center gap-3 group">
+        <div className="flex items-center gap-3 group cursor-pointer" onClick={onHomeClick}>
           {isCompany ? (
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 shrink-0 transform group-hover:scale-105 transition-transform duration-300">
               <Building2 size={20} />
