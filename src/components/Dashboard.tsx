@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { LandTransaction } from '../types';
+import { createPortal } from 'react-dom';
+import { LandTransaction, GlobalFilterState } from '../types';
+import { calculateFilteredSummary } from '../utils/filterHelper';
 import { analyzeLandData } from '../utils/landAnalyzer';
 import { toBengaliNumber } from '../data/defaultData';
 import { 
@@ -19,10 +21,15 @@ interface DashboardProps {
   onHighlightTransaction: (id: string) => void;
   onAddPurchase: () => void;
   onAddSale: () => void;
+  globalFilter?: GlobalFilterState;
+  setGlobalFilter: (filter: GlobalFilterState) => void;
 }
+
+import GlobalFilterSlicer from './GlobalFilterSlicer';
 
 export default function Dashboard({
   transactions,
+  globalFilter,
   onNavigateToTab,
   onSetSearchQuery,
   onEditTransaction,
@@ -30,7 +37,8 @@ export default function Dashboard({
   onPrintTransaction,
   onHighlightTransaction,
   onAddPurchase,
-  onAddSale
+  onAddSale,
+  setGlobalFilter
 }: DashboardProps) {
   const [viewTx, setViewTx] = useState<LandTransaction | null>(null);
   const analysis = analyzeLandData(transactions);
@@ -41,6 +49,9 @@ export default function Dashboard({
   const remaining = totalPurchase - totalSale;
   
   const [chartTimeFilter, setChartTimeFilter] = useState('6M');
+
+  const filteredSummary = globalFilter ? calculateFilteredSummary(transactions, globalFilter) : null;
+  const hasActiveFilter = globalFilter && (globalFilter.mouza || globalFilter.khatian || globalFilter.dag);
 
   // Bar Chart Data (Sales & Purchases by mouza)
   const chartTransactions = transactions.filter(t => {
@@ -57,10 +68,13 @@ export default function Dashboard({
 
   const mouzaMap: Record<string, { name: string, Purchases: number, Sales: number }> = {};
   chartTransactions.forEach(t => {
-    const m = t.mouza || 'অজানা';
-    if (!mouzaMap[m]) mouzaMap[m] = { name: m, Purchases: 0, Sales: 0 };
-    if (t.type === 'purchase') mouzaMap[m].Purchases += t.transactionAmount;
-    if (t.type === 'sale') mouzaMap[m].Sales += t.transactionAmount;
+    t.khatians.forEach(kh => {
+      const m = kh.mouza?.trim() || t.mouza || 'অজানা';
+      if (!mouzaMap[m]) mouzaMap[m] = { name: m, Purchases: 0, Sales: 0 };
+      const khAmount = kh.dags.reduce((s, d) => s + (d.amount || 0), 0);
+      if (t.type === 'purchase') mouzaMap[m].Purchases += khAmount;
+      if (t.type === 'sale') mouzaMap[m].Sales += khAmount;
+    });
   });
   const finalBarData = Object.values(mouzaMap);
 
@@ -73,105 +87,159 @@ export default function Dashboard({
   const pieColors = ['#a855f7', '#ff5b5b', '#3b82f6', '#10b981'];
 
   return (
-    <div className="space-y-6 font-sans text-slate-800 animate-in fade-in duration-300 pb-12">
+    <div className="space-y-6 font-sans text-text-primary animate-in fade-in duration-300 pb-12">
       
       {/* Header section */}
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-[22px] font-semibold text-slate-700 tracking-tight">Dashboard Overview</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 mt-2">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-text-primary tracking-tight">ড্যাশবোর্ড ওভারভিউ</h1>
+          <p className="text-xs md:text-sm text-text-muted mt-1">আপনার ভূমি রেকর্ড এবং লেনদেনের পরিসংখ্যান দেখুন</p>
+        </div>
         
         {/* ACTION BUTTONS */}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
           <button
             onClick={onAddPurchase}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 transition-all rounded-lg shadow-sm cursor-pointer select-none"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-slate-teal hover:bg-[#1D3B47] text-white rounded-lg md:rounded-xl text-xs md:text-sm font-bold custom-shadow shadow-teal-600/20 transition-all active:scale-95"
           >
-            <PlusCircle size={14} />
+            <PlusCircle size={16} />
             জমি ক্রয়
           </button>
           <button
             onClick={onAddSale}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all rounded-lg shadow-sm cursor-pointer select-none"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-alert-peach text-rose-700 border border-alert-border hover:bg-[#f0c4b8] rounded-lg md:rounded-xl text-xs md:text-sm font-bold custom-shadow shadow-rose-600/20 transition-all active:scale-95"
           >
-            <MinusCircle size={14} />
+            <MinusCircle size={16} />
             জমি বিক্রয়
           </button>
         </div>
       </div>
 
-      {/* Top 4 Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {/* Card 1: Total Purchased Land */}
-        <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group">
-          <Receipt className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-purple-600 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
-          <div className="relative z-10">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 mb-2 md:mb-4">
-              <Receipt className="w-4 h-4 md:w-6 md:h-6" />
+
+
+      {/* Global Summary Stats block */}
+      {!hasActiveFilter && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
+          {/* Card 1: Total Purchased Land */}
+          <div className="bg-white rounded-xl md:rounded-[20px] p-3 md:p-6 custom-shadow border border-border-subtle flex flex-col relative overflow-hidden group">
+            <Receipt className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-purple-600 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
+            <div className="relative z-10">
+              <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-[20px] bg-purple-100 flex items-center justify-center text-purple-600 mb-2 md:mb-4">
+                <Receipt className="w-4 h-4 md:w-6 md:h-6" />
             </div>
-            <p className="text-slate-500 text-[10px] md:text-sm font-medium">মোট ক্রয়কৃত জমি</p>
-            <h2 className="text-lg md:text-2xl font-bold text-purple-600 mt-1">{toBengaliNumber(totalPurchase.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-slate-500">শতক</span></h2>
+            <p className="text-text-muted text-[10px] md:text-sm font-medium">মোট ক্রয়কৃত জমি</p>
+            <h2 className="text-lg md:text-2xl font-bold text-purple-600 mt-1">{toBengaliNumber(totalPurchase.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-text-muted">শতক</span></h2>
             <div className="flex items-center gap-1 md:gap-2 mt-2 md:mt-4 text-[9px] md:text-xs font-semibold text-teal-500">
-              <span>~ 8%</span> <span className="text-slate-400 font-medium">গত মাসের তুলনায়</span>
+              <span>~ 8%</span> <span className="text-text-muted font-medium">গত মাসের তুলনায়</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Total Sold Land */}
-        <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group">
-          <Tag className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-rose-600 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
+        <div className="bg-white rounded-xl md:rounded-[20px] p-3 md:p-6 custom-shadow border border-border-subtle flex flex-col relative overflow-hidden group">
+          <Tag className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-rose-700 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
           <div className="relative z-10">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-[20px] bg-rose-100 flex items-center justify-center text-rose-700 mb-2 md:mb-4">
               <Tag className="w-4 h-4 md:w-6 md:h-6" />
             </div>
-            <p className="text-slate-500 text-[10px] md:text-sm font-medium">মোট বিক্রীত জমি</p>
-            <h2 className="text-lg md:text-2xl font-bold text-rose-600 mt-1">{toBengaliNumber(totalSale.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-slate-500">শতক</span></h2>
+            <p className="text-text-muted text-[10px] md:text-sm font-medium">মোট বিক্রীত জমি</p>
+            <h2 className="text-lg md:text-2xl font-bold text-rose-700 mt-1">{toBengaliNumber(totalSale.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-text-muted">শতক</span></h2>
             <div className="flex items-center gap-1 md:gap-2 mt-2 md:mt-4 text-[9px] md:text-xs font-semibold text-teal-500">
-              <span>~ 20%</span> <span className="text-slate-400 font-medium whitespace-nowrap">গত মাসের তুলনায়</span>
+              <span>~ 20%</span> <span className="text-text-muted font-medium whitespace-nowrap">গত মাসের তুলনায়</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Remaining Land */}
-        <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group">
+        <div className="bg-white rounded-xl md:rounded-[20px] p-3 md:p-6 custom-shadow border border-border-subtle flex flex-col relative overflow-hidden group">
           <Wallet className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-emerald-600 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
           <div className="relative z-10">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-[20px] bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2 md:mb-4">
               <Wallet className="w-4 h-4 md:w-6 md:h-6" />
             </div>
-            <p className="text-slate-500 text-[10px] md:text-sm font-medium">অবশিষ্ট জমি</p>
-            <h2 className="text-lg md:text-2xl font-bold text-emerald-600 mt-1">{toBengaliNumber(remaining.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-slate-500">শতক</span></h2>
+            <p className="text-text-muted text-[10px] md:text-sm font-medium">অবশিষ্ট জমি</p>
+            <h2 className="text-lg md:text-2xl font-bold text-emerald-600 mt-1">{toBengaliNumber(remaining.toFixed(0))} <span className="text-[10px] md:text-sm font-normal text-text-muted">শতক</span></h2>
             <div className="flex items-center gap-1 md:gap-2 mt-2 md:mt-4 text-[9px] md:text-xs font-semibold text-teal-500">
-              <span>~ 32%</span> <span className="text-slate-400 font-medium whitespace-nowrap">গত মাসের তুলনায়</span>
+              <span>~ 32%</span> <span className="text-text-muted font-medium whitespace-nowrap">গত মাসের তুলনায়</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Total Transactions */}
-        <div className="bg-white rounded-xl md:rounded-2xl p-3 md:p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group">
+        <div className="bg-white rounded-xl md:rounded-[20px] p-3 md:p-6 custom-shadow border border-border-subtle flex flex-col relative overflow-hidden group">
           <Building className="w-20 h-20 md:w-32 md:h-32 absolute -right-4 -bottom-4 md:-right-6 md:-bottom-6 text-blue-600 opacity-[0.06] group-hover:scale-110 transition-transform duration-500 pointer-events-none" strokeWidth={1} />
           <div className="relative z-10">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 mb-2 md:mb-4">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-[20px] bg-blue-100 flex items-center justify-center text-blue-600 mb-2 md:mb-4">
               <Building className="w-4 h-4 md:w-6 md:h-6" />
             </div>
-            <p className="text-slate-500 text-[10px] md:text-sm font-medium">মোট লেনদেন</p>
-            <h2 className="text-lg md:text-2xl font-bold text-slate-800 mt-1">{toBengaliNumber(transactions.length)} <span className="text-[10px] md:text-sm font-normal text-slate-500">টি</span></h2>
-            <div className="flex items-center gap-1 md:gap-2 mt-2 md:mt-4 text-[8px] md:text-xs font-semibold text-slate-600 leading-tight">
+            <p className="text-text-muted text-[10px] md:text-sm font-medium">মোট লেনদেন</p>
+            <h2 className="text-lg md:text-2xl font-bold text-text-primary mt-1">{toBengaliNumber(transactions.length)} <span className="text-[10px] md:text-sm font-normal text-text-muted">টি</span></h2>
+            <div className="flex items-center gap-1 md:gap-2 mt-2 md:mt-4 text-[8px] md:text-xs font-semibold text-slate-teal leading-tight">
               <span>(ক্রয় {toBengaliNumber(transactions.filter(t => t.type === 'purchase').length)}টি, <br className="md:hidden" />বিক্রয় {toBengaliNumber(transactions.filter(t => t.type === 'sale').length)}টি)</span>
+            </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Global Filter */}
+      <GlobalFilterSlicer 
+        transactions={transactions}
+        filterState={globalFilter || { mouza: null, khatian: null, dag: null }}
+        setFilterState={setGlobalFilter}
+      />
+
+      {/* Custom Summary for Active Filter */}
+      {hasActiveFilter && filteredSummary && (
+        <div className="bg-gradient-to-r from-teal-50 to-indigo-50 border-2 border-border-subtle rounded-3xl p-6 custom-shadow mb-6 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-mint-pill text-slate-teal rounded-xl">
+              <Filter size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-text-primary">নির্বাচিত জমির সারাংশ</h3>
+              <div className="flex flex-wrap gap-2 mt-1.5 text-sm text-slate-teal font-medium">
+                {globalFilter.mouza && <span className="bg-white/60 px-2 py-0.5 rounded-md">মৌজা: {globalFilter.mouza}</span>}
+                {globalFilter.khatian && <span className="bg-white/60 px-2 py-0.5 rounded-md">খতিয়ান: {globalFilter.khatian}</span>}
+                {globalFilter.dag && <span className="bg-white/60 px-2 py-0.5 rounded-md">দাগ: {globalFilter.dag}</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-[20px] p-5 border border-border-subtle custom-shadow">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">মোট ক্রয়</div>
+              <div className="text-2xl font-black text-slate-teal font-mono">
+                {toBengaliNumber(filteredSummary.totalPurchased)} <span className="text-sm">শতক</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-[20px] p-5 border border-border-subtle custom-shadow">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">মোট বিক্রয়</div>
+              <div className="text-2xl font-black text-rose-700 font-mono">
+                {toBengaliNumber(filteredSummary.totalSold)} <span className="text-sm">শতক</span>
+              </div>
+            </div>
+            <div className="bg-white rounded-[20px] p-5 border border-border-subtle custom-shadow">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">অবশিষ্ট জমি</div>
+              <div className="text-2xl font-black text-slate-teal font-mono">
+                {toBengaliNumber(filteredSummary.remaining)} <span className="text-sm">শতক</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Bar Chart (Sales & Purchases) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
+        <div className="lg:col-span-2 bg-white rounded-[20px] p-6 custom-shadow border border-border-subtle flex flex-col">
           <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-800 text-lg">Sales & Purchases</h3>
+              <h3 className="font-bold text-text-primary text-lg">Sales & Purchases</h3>
               <select 
                 value={chartTimeFilter}
                 onChange={(e) => setChartTimeFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 cursor-pointer font-medium outline-none focus:border-teal-500 appearance-none pr-8 relative bg-no-repeat bg-[right_0.5rem_center] bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23475569%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')]"
+                className="px-3 py-1.5 rounded-lg bg-ice-tint border border-border-subtle text-xs text-slate-teal cursor-pointer font-medium outline-none focus:border-teal-500 appearance-none pr-8 relative bg-no-repeat bg-[right_0.5rem_center] bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23475569%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')]"
               >
                 <option value="1M">1 Month</option>
                 <option value="3M">3 Months</option>
@@ -209,9 +277,9 @@ export default function Dashboard({
         </div>
 
         {/* Pie Chart (Devices/Types) */}
-        <div className="hidden md:flex bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex-col">
+        <div className="hidden md:flex bg-white rounded-[20px] p-6 custom-shadow border border-border-subtle flex-col">
           <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-800 text-lg">Transaction Types</h3>
+              <h3 className="font-bold text-text-primary text-lg">Transaction Types</h3>
             </div>
             <div className="flex-1 min-h-[200px] w-full flex flex-col items-center justify-center relative">
               <ResponsiveContainer width="100%" height="100%">
@@ -248,7 +316,7 @@ export default function Dashboard({
             {/* Legend placed at bottom */}
             <div className="flex justify-center gap-6 mt-4 w-full">
               {pieData.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <div key={index} className="flex items-center gap-2 text-xs font-semibold text-slate-teal">
                   <div className="w-3 h-2 rounded-full" style={{ backgroundColor: pieColors[index % pieColors.length] }}></div>
                   {entry.name}
                 </div>
@@ -260,10 +328,10 @@ export default function Dashboard({
       </div>
 
       {/* Recent Records Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+      <div className="bg-white rounded-[20px] custom-shadow border border-border-subtle overflow-hidden flex flex-col">
         <div className="p-6 flex justify-between items-center">
-          <h3 className="font-bold text-slate-800 text-lg">Recent Records</h3>
-          <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 cursor-pointer flex items-center gap-2 font-medium">
+          <h3 className="font-bold text-text-primary text-lg">Recent Records</h3>
+          <div className="px-3 py-1.5 rounded-lg bg-ice-tint border border-border-subtle text-xs text-slate-teal cursor-pointer flex items-center gap-2 font-medium">
             Latest <ChevronRight size={14} className="rotate-90" />
           </div>
         </div>
@@ -271,56 +339,60 @@ export default function Dashboard({
         <div className="overflow-x-auto">
           <table className="table-auto min-w-full text-center text-sm whitespace-nowrap border-collapse">
             <thead>
-              <tr className="text-indigo-800 font-extrabold text-[13px] bg-indigo-100/80">
-                <th className="py-2.5 px-4 text-center border border-indigo-200">#</th>
-                <th className="py-2.5 px-4 border border-indigo-200">ক্রেতা</th>
-                <th className="py-2.5 px-4 border border-indigo-200">বিক্রেতা</th>
-                <th className="py-2.5 px-4 border border-indigo-200">দলিল নাম্বার</th>
-                <th className="py-2.5 px-4 border border-indigo-200">তারিখ</th>
-                <th className="py-2.5 px-4 border border-indigo-200">দলিলের প্রকৃতি</th>
-                <th className="py-2.5 px-4 border border-indigo-200">মৌজার নাম</th>
-                <th className="py-2.5 px-4 border border-indigo-200">হস্তান্তরিত পরিমান</th>
-                <th className="py-2.5 px-4 border border-indigo-200">ধরণ</th>
-                <th className="py-2.5 px-4 text-center border border-indigo-200">অ্যাকশন</th>
+              <tr className="text-indigo-900 font-black text-[12px] bg-indigo-50/80 border-b border-indigo-100">
+                <th className="py-3 px-4 text-center font-bold">#</th>
+                <th className="py-3 px-4 font-bold">ক্রেতা</th>
+                <th className="py-3 px-4 font-bold">বিক্রেতা</th>
+                <th className="py-3 px-4 font-bold">দলিল নাম্বার</th>
+                <th className="py-3 px-4 font-bold">তারিখ</th>
+                <th className="py-3 px-4 font-bold">দলিলের প্রকৃতি</th>
+                <th className="py-3 px-4 font-bold">মৌজার নাম</th>
+                <th className="py-3 px-4 font-bold">হস্তান্তরিত পরিমান</th>
+                <th className="py-3 px-4 font-bold">ধরণ</th>
+                <th className="py-3 px-4 text-center font-bold">অ্যাকশন</th>
               </tr>
             </thead>
-            <tbody className="bg-slate-50/50">
+            <tbody className="bg-white">
               {transactions.slice(0, 5).map((t, idx) => (
                 <tr 
                   key={t.id} 
-                  className="hover:bg-indigo-50/60 transition-colors cursor-pointer group"
+                  className="hover:bg-indigo-50/60 transition-colors duration-200 cursor-pointer group border-b border-border-subtle/40 last:border-0"
                   onClick={() => setViewTx(t)}
                 >
-                  <td className="py-3 px-4 text-slate-500 font-bold text-xs text-center border border-slate-200">{toBengaliNumber(idx + 1)}</td>
-                  <td className="py-3 px-4 text-slate-700 font-bold text-[13px] border border-slate-200">{t.buyerName}</td>
-                  <td className="py-3 px-4 text-slate-700 font-bold text-[13px] border border-slate-200">{t.sellerName}</td>
-                  <td className="py-3 px-4 text-slate-800 font-black text-[13px] border border-slate-200">{toBengaliNumber(t.deedNumber)}</td>
-                  <td className="py-3 px-4 text-slate-500 text-xs font-semibold border border-slate-200">{toBengaliNumber(t.date)}</td>
-                  <td className="py-3 px-4 text-slate-600 font-bold text-xs border border-slate-200">{t.deedNature || '-'}</td>
-                  <td className="py-3 px-4 text-slate-700 font-extrabold text-[13px] border border-slate-200">{t.mouza}</td>
-                  <td className="py-3 px-4 font-black text-slate-800 text-[13px] border border-slate-200">{toBengaliNumber(t.transactionAmount)} <span className="text-[10px] text-slate-500 font-bold">শতক</span></td>
-                  <td className="py-3 px-4 border border-slate-200">
-                    <span className={`px-2 py-1 rounded text-[10px] font-black tracking-wide ${t.type === 'purchase' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  <td className="py-4 px-4 text-text-muted font-bold text-xs text-center">{toBengaliNumber(idx + 1)}</td>
+                  <td className="py-4 px-4 text-slate-700 font-semibold text-[13px]">{t.buyerName}</td>
+                  <td className="py-4 px-4 text-slate-700 font-semibold text-[13px]">{t.sellerName}</td>
+                  <td className="py-4 px-4 text-slate-800 font-black text-[13px]">{toBengaliNumber(t.deedNumber)}</td>
+                  <td className="py-4 px-4 text-text-muted text-[12px] font-medium">{toBengaliNumber(t.date)}</td>
+                  <td className="py-4 px-4 text-slate-teal font-semibold text-[12px]">{t.deedNature || '-'}</td>
+                  <td className="py-4 px-4 text-slate-700 font-bold text-[13px]">
+                    {Array.from(new Set([t.mouza, ...t.khatians.map(k => k.mouza?.trim())].filter(Boolean)))
+                      .map(m => m.replace(/\s*মৌজা\s*$/, ''))
+                      .join(', ')}
+                  </td>
+                  <td className="py-4 px-4 font-black text-slate-800 text-[13px]">{toBengaliNumber(t.transactionAmount)} <span className="text-[10px] text-text-muted font-bold">শতক</span></td>
+                  <td className="py-4 px-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wide ${t.type === 'purchase' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                       {t.type === 'purchase' ? 'ক্রয়' : 'বিক্রয়'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-center border border-slate-200">
+                  <td className="py-4 px-4 text-center">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         setViewTx(t);
                       }}
-                      className="text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer p-1.5 hover:bg-indigo-100 rounded-md"
+                      className="text-indigo-400 opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer p-2 hover:bg-indigo-100 hover:text-indigo-600 rounded-full"
                       title="বিস্তারিত দেখুন"
                     >
-                      <ExternalLink size={15} />
+                      <ExternalLink size={16} />
                     </button>
                   </td>
                 </tr>
               ))}
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 font-semibold text-sm border border-slate-200">
+                  <td colSpan={10} className="py-12 text-center text-text-muted font-semibold text-sm border border-border-subtle">
                     কোনো ডাটা পাওয়া যায়নি
                   </td>
                 </tr>
@@ -329,81 +401,86 @@ export default function Dashboard({
           </table>
         </div>
       </div>
-      {viewTx && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:hidden">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <FileText className="text-indigo-600" size={20} /> 
+      {viewTx && createPortal(
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-900/60 backdrop-blur-sm animate-in fade-in print:hidden">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+            <div className="bg-white rounded-[20px] shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-ice-tint shrink-0">
+              <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
+                <FileText className="text-slate-teal" size={20} /> 
                 দলিলের বিস্তারিত তথ্য
               </h2>
-              <button onClick={() => setViewTx(null)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition cursor-pointer">
+              <button onClick={() => setViewTx(null)} className="p-2 text-text-muted hover:text-rose-700 hover:bg-alert-peach rounded-full transition cursor-pointer">
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto bg-white flex-1">
+            <div className="p-6 overflow-y-auto bg-white flex-1 min-h-0">
               <div className="grid grid-cols-2 gap-6 mb-6">
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <span className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">গ্রহীতা / ক্রেতা</span>
-                  <span className="text-base font-extrabold text-slate-800">{viewTx.buyerName}</span>
+                <div className="bg-ice-tint rounded-xl p-4 border border-border-subtle">
+                  <span className="text-xs font-bold text-text-muted block mb-1 uppercase tracking-wider">গ্রহীতা / ক্রেতা</span>
+                  <span className="text-base font-extrabold text-text-primary">{viewTx.buyerName}</span>
                 </div>
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <span className="text-xs font-bold text-slate-400 block mb-1 uppercase tracking-wider">দাতা / বিক্রেতা</span>
-                  <span className="text-base font-extrabold text-slate-800">{viewTx.sellerName}</span>
+                <div className="bg-ice-tint rounded-xl p-4 border border-border-subtle">
+                  <span className="text-xs font-bold text-text-muted block mb-1 uppercase tracking-wider">দাতা / বিক্রেতা</span>
+                  <span className="text-base font-extrabold text-text-primary">{viewTx.sellerName}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">দলিল নাম্বার</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase tracking-wider">দলিল নাম্বার</span>
                   <span className="font-extrabold text-slate-700">{toBengaliNumber(viewTx.deedNumber)}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">তারিখ</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase tracking-wider">তারিখ</span>
                   <span className="font-bold text-slate-700">{toBengaliNumber(viewTx.date)}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">দলিলের প্রকৃতি</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase tracking-wider">দলিলের প্রকৃতি</span>
                   <span className="font-bold text-slate-700">{viewTx.deedNature || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">মৌজা</span>
-                  <span className="font-extrabold text-indigo-700">{viewTx.mouza}</span>
+                  <span className="text-[10px] font-bold text-text-muted block uppercase tracking-wider">মৌজা</span>
+                  <span className="font-extrabold text-slate-teal">
+                    {Array.from(new Set([viewTx.mouza, ...viewTx.khatians.map(k => k.mouza?.trim())].filter(Boolean)))
+                      .map(m => m.replace(/\s*মৌজা\s*$/, ''))
+                      .join(', ')}
+                  </span>
                 </div>
               </div>
 
-              <div className="border border-indigo-100 rounded-xl overflow-hidden mb-6">
-                <div className="bg-indigo-50/50 px-4 py-2 border-b border-indigo-100 flex justify-between items-center">
-                  <span className="font-bold text-indigo-900 text-sm">তফসিল সমূহ</span>
-                  <span className="font-black text-indigo-700 text-sm">মোট: {toBengaliNumber(viewTx.transactionAmount)} শতক</span>
+              <div className="border border-border-subtle rounded-xl overflow-hidden mb-6">
+                <div className="bg-ice-tint/50 px-4 py-2 border-b border-border-subtle flex justify-between items-center">
+                  <span className="font-bold text-text-primary text-sm">তফসিল সমূহ</span>
+                  <span className="font-black text-slate-teal text-sm">মোট: {toBengaliNumber(viewTx.transactionAmount)} শতক</span>
                 </div>
                 <div className="p-4 space-y-4">
                   {viewTx.khatians.map((k, i) => (
                     <div key={k.id} className="text-sm">
                       <div className="font-bold text-slate-700 mb-1">তফসিল {toBengaliNumber(i + 1)}</div>
-                      <div className="text-xs text-slate-600 mb-2">
+                      <div className="text-xs text-slate-teal mb-2">
                         {k.hasCS && <span className="mr-3">সি.এস: <span className="font-bold">{k.csKhatian}</span></span>}
                         {k.hasSA && <span className="mr-3">এস.এ: <span className="font-bold">{k.saKhatian}</span></span>}
                         {k.hasRS && <span className="mr-3">আর.এস: <span className="font-bold">{k.rsKhatian}</span></span>}
                         {k.hasNamjari && <span>নামজারি: <span className="font-bold">{k.namjariKhatian}</span></span>}
                       </div>
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-500">
+                        <thead className="bg-ice-tint text-text-muted">
                           <tr>
-                            <th className="py-1 px-2 border border-slate-100">সি.এস দাগ</th>
-                            <th className="py-1 px-2 border border-slate-100">এস.এ দাগ</th>
-                            <th className="py-1 px-2 border border-slate-100">আর.এস দাগ</th>
-                            <th className="py-1 px-2 border border-slate-100 text-right">পরিমান</th>
+                            <th className="py-1 px-2 border border-border-subtle">সি.এস দাগ</th>
+                            <th className="py-1 px-2 border border-border-subtle">এস.এ দাগ</th>
+                            <th className="py-1 px-2 border border-border-subtle">আর.এস দাগ</th>
+                            <th className="py-1 px-2 border border-border-subtle text-right">পরিমান</th>
                           </tr>
                         </thead>
                         <tbody>
                           {k.dags.map(d => (
                             <tr key={d.id}>
-                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasCS ? d.csDag : '-'}</td>
-                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasSA ? d.saDag : '-'}</td>
-                              <td className="py-1 px-2 border border-slate-100 font-medium">{d.hasRS ? d.rsDag : '-'}</td>
-                              <td className="py-1 px-2 border border-slate-100 text-right font-bold">{toBengaliNumber(d.amount)}</td>
+                              <td className="py-1 px-2 border border-border-subtle font-medium">{d.hasCS ? d.csDag : '-'}</td>
+                              <td className="py-1 px-2 border border-border-subtle font-medium">{d.hasSA ? d.saDag : '-'}</td>
+                              <td className="py-1 px-2 border border-border-subtle font-medium">{d.hasRS ? d.rsDag : '-'}</td>
+                              <td className="py-1 px-2 border border-border-subtle text-right font-bold">{toBengaliNumber(d.amount)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -414,13 +491,13 @@ export default function Dashboard({
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+            <div className="p-4 border-t border-border-subtle bg-ice-tint flex justify-end gap-3 shrink-0">
               <button 
                 onClick={() => {
                   setViewTx(null);
                   onEditTransaction(viewTx);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg font-bold transition shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg font-bold transition custom-shadow cursor-pointer"
               >
                 <Edit2 size={16} /> Edit
               </button>
@@ -429,14 +506,16 @@ export default function Dashboard({
                   setViewTx(null);
                   onPrintTransaction(viewTx);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition shadow-sm shadow-indigo-200 cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition custom-shadow shadow-indigo-200 cursor-pointer"
               >
                 <Printer size={16} /> Print
               </button>
             </div>
           </div>
         </div>
-      )}
+      </div>,
+      document.body
+    )}
       
     </div>
   );

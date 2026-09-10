@@ -58,26 +58,25 @@ export function analyzeLandData(transactions: LandTransaction[]) {
       totalSold += amount;
     }
 
-    // Mouza aggregate
-    if (!mouzaMap[tx.mouza]) {
-      mouzaMap[tx.mouza] = { purchased: 0, sold: 0, deeds: new Set(), rsKhatians: new Set(), namjariKhatians: new Set(), rsDags: new Set() };
-    }
-    if (isPurchase) {
-      mouzaMap[tx.mouza].purchased += amount;
-    } else {
-      mouzaMap[tx.mouza].sold += amount;
-    }
-    mouzaMap[tx.mouza].deeds.add(tx.deedNumber);
-
     // Khatian & Dag detailed tracking
     tx.khatians.forEach((kh) => {
+      const khatianMouza = kh.mouza?.trim() || tx.mouza;
+
+      if (!mouzaMap[khatianMouza]) {
+        mouzaMap[khatianMouza] = { purchased: 0, sold: 0, deeds: new Set(), rsKhatians: new Set(), namjariKhatians: new Set(), rsDags: new Set() };
+      }
+      mouzaMap[khatianMouza].deeds.add(tx.deedNumber);
+
+      let khAmount = 0;
       kh.dags.forEach((dag) => {
+        khAmount += (dag.amount || 0);
+
         // Track RS Dag mismatch separately
         if (dag.hasRS && dag.rsDag) {
-           mouzaMap[tx.mouza].rsDags.add(dag.rsDag);
-           const rsKey = `${tx.mouza}_${dag.rsDag}`;
+           mouzaMap[khatianMouza].rsDags.add(dag.rsDag);
+           const rsKey = `${khatianMouza}_${dag.rsDag}`;
            if (!rsDagMap[rsKey]) {
-              rsDagMap[rsKey] = { mouza: tx.mouza, dagNo: dag.rsDag, purchased: 0, sold: 0, remaining: 0 };
+              rsDagMap[rsKey] = { mouza: khatianMouza, dagNo: dag.rsDag, purchased: 0, sold: 0, remaining: 0 };
            }
            const amt = dag.amount || 0;
            if (isPurchase) {
@@ -87,9 +86,15 @@ export function analyzeLandData(transactions: LandTransaction[]) {
            }
         } else if (dag.rsDag) {
            // fallback if checkbox isn't checked but user typed RS Dag
-           mouzaMap[tx.mouza].rsDags.add(dag.rsDag);
+           mouzaMap[khatianMouza].rsDags.add(dag.rsDag);
         }
       });
+
+      if (isPurchase) {
+        mouzaMap[khatianMouza].purchased += khAmount;
+      } else {
+        mouzaMap[khatianMouza].sold += khAmount;
+      }
 
       // Find khatian numbers and types
       const kTypes: ('CS' | 'SA' | 'RS' | 'Namjari')[] = [];
@@ -100,12 +105,12 @@ export function analyzeLandData(transactions: LandTransaction[]) {
       if (kh.hasRS && kh.rsKhatian) { 
         kTypes.push('RS'); 
         kNames.push(kh.rsKhatian); 
-        mouzaMap[tx.mouza].rsKhatians.add(kh.rsKhatian);
+        mouzaMap[khatianMouza].rsKhatians.add(kh.rsKhatian);
       }
       if (kh.hasNamjari && kh.namjariKhatian) { 
         kTypes.push('Namjari'); 
         kNames.push(kh.namjariKhatian); 
-        mouzaMap[tx.mouza].namjariKhatians.add(kh.namjariKhatian);
+        mouzaMap[khatianMouza].namjariKhatians.add(kh.namjariKhatian);
       }
       
       // Default to what is present if checkboxes aren't check but they typed in them
@@ -115,12 +120,12 @@ export function analyzeLandData(transactions: LandTransaction[]) {
         if (kh.rsKhatian) { 
           kTypes.push('RS'); 
           kNames.push(kh.rsKhatian);
-          mouzaMap[tx.mouza].rsKhatians.add(kh.rsKhatian);
+          mouzaMap[khatianMouza].rsKhatians.add(kh.rsKhatian);
         }
         if (kh.namjariKhatian) { 
           kTypes.push('Namjari'); 
           kNames.push(kh.namjariKhatian);
-          mouzaMap[tx.mouza].namjariKhatians.add(kh.namjariKhatian);
+          mouzaMap[khatianMouza].namjariKhatians.add(kh.namjariKhatian);
         }
       }
 
@@ -128,10 +133,10 @@ export function analyzeLandData(transactions: LandTransaction[]) {
         const kNo = kNames[idx];
         if (!kNo) return;
 
-        const kKey = `${tx.mouza}_${kType}_${kNo}`;
+        const kKey = `${khatianMouza}_${kType}_${kNo}`;
         if (!khatianMap[kKey]) {
           khatianMap[kKey] = {
-            mouza: tx.mouza,
+            mouza: khatianMouza,
             khatianType: kType,
             khatianNo: kNo,
             purchased: 0,
@@ -162,7 +167,7 @@ export function analyzeLandData(transactions: LandTransaction[]) {
             const dagKey = `${kKey}_${dType}_${dNo}`;
             if (!dagMap[dagKey]) {
               dagMap[dagKey] = {
-                mouza: tx.mouza,
+                mouza: khatianMouza,
                 khatianType: kType,
                 khatianNo: kNo,
                 dagType: dType,

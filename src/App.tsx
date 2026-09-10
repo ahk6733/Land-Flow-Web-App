@@ -14,11 +14,15 @@ import html2canvas from 'html2canvas';
 import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from './firebase';
-import { LandTransaction } from './types';
+import { LandTransaction, GlobalFilterState } from './types';
 import { INITIAL_TRANSACTIONS, INITIAL_CUSTOMERS, INITIAL_ORDERS, toBengaliNumber } from './data/defaultData';
 import { openAttachmentInNewTab } from './utils/attachmentHelper';
+import { filterTransactionsByHierarchy, calculateFilteredSummary } from './utils/filterHelper';
 import Dashboard from './components/Dashboard';
+import DeedDetailPanel from './components/DeedDetailPanel';
+import MouzaSummaryTable from './components/MouzaSummaryTable';
 import TransactionForm from './components/TransactionForm';
+import GlobalFilterSlicer from './components/GlobalFilterSlicer';
 import SearchQuery from './components/SearchQuery';
 import OrderList from './components/OrderList';
 import Customers from './components/Customers';
@@ -36,6 +40,7 @@ import {
   PlusCircle, 
   MinusCircle, 
   Search, 
+  Filter,
   LayoutDashboard, 
   ShieldCheck, 
   HardDriveDownload, 
@@ -138,8 +143,14 @@ export default function App() {
   const [isAddingSale, setIsAddingSale] = useState(false);
   const [purchaseSearchTerm, setPurchaseSearchTerm] = useState('');
   const [saleSearchTerm, setSaleSearchTerm] = useState('');
+  const [purchaseMouzaFilter, setPurchaseMouzaFilter] = useState<string | null>(null);
+  const [saleMouzaFilter, setSaleMouzaFilter] = useState<string | null>(null);
   const [expandedPurchases, setExpandedPurchases] = useState<{ [key: string]: boolean }>({});
   const [expandedSales, setExpandedSales] = useState<{ [key: string]: boolean }>({});
+
+  const [dashboardFilter, setDashboardFilter] = useState<GlobalFilterState>({ mouza: null, khatian: null, dag: null });
+  const [purchaseFilter, setPurchaseFilter] = useState<GlobalFilterState>({ mouza: null, khatian: null, dag: null });
+  const [saleFilter, setSaleFilter] = useState<GlobalFilterState>({ mouza: null, khatian: null, dag: null });
 
   // Auth States
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]); // Kept for UserProfile compatibility for now
@@ -709,24 +720,24 @@ export default function App() {
 
         const rowspanStr = dIdx === 0 ? `rowspan="${k.dags.length}"` : '';
         const firstCol = dIdx === 0 ? `
-          <td class="p-3 font-bold text-slate-800 border-r border-slate-200 align-top leading-relaxed bg-slate-50/20" ${rowspanStr}>
+          <td class="p-3 font-bold text-text-primary border-r border-border-subtle align-top leading-relaxed bg-ice-tint/20" ${rowspanStr}>
             <div class="flex flex-col">${kLabelHtml}</div>
           </td>
         ` : '';
 
         khatianTableRows += `
-          <tr class="text-slate-800 hover:bg-slate-50 border-b border-slate-200">
+          <tr class="text-text-primary hover:bg-ice-tint border-b border-border-subtle">
             ${firstCol}
-            <td class="p-3 text-slate-700 border-r border-slate-200 leading-relaxed font-semibold">
+            <td class="p-3 text-slate-700 border-r border-border-subtle leading-relaxed font-semibold">
               ${dLabel}
             </td>
-            <td class="p-3 text-slate-700 border-r border-slate-200 leading-relaxed">
+            <td class="p-3 text-slate-700 border-r border-border-subtle leading-relaxed">
               ${d.landClass || '-'}
             </td>
-            <td class="p-3 text-right text-slate-700 border-r border-slate-200">
+            <td class="p-3 text-right text-slate-700 border-r border-border-subtle">
               ${toBn(k.hasNamjari ? (d.namjariAmount !== undefined ? d.namjariAmount : 0) : (d.kateAmount !== undefined ? d.kateAmount : 0))} শতক
             </td>
-            <td class="p-3 text-right text-slate-900 font-extrabold">
+            <td class="p-3 text-right text-text-primary font-extrabold">
               ${toBn(d.amount)} শতক
             </td>
           </tr>
@@ -819,13 +830,13 @@ export default function App() {
             .border-dashed { border-style: dashed !important; }
             .border-double { border-style: double !important; }
             
-            .border-slate-200 { border-color: #cbd5e1 !important; }
+            .border-border-subtle { border-color: #cbd5e1 !important; }
             .border-slate-300 { border-color: #94a3b8 !important; }
             .border-slate-400 { border-color: #64748b !important; }
             
             .rounded-lg { border-radius: 8px !important; }
             .rounded-xl { border-radius: 12px !important; }
-            .rounded-2xl { border-radius: 16px !important; }
+            .rounded-[20px] { border-radius: 16px !important; }
             
             .p-3 { padding: 12px !important; }
             .p-3\.5 { padding: 14px !important; }
@@ -854,23 +865,23 @@ export default function App() {
             .inline-flex { display: inline-flex !important; }
             
             .bg-white { background-color: #ffffff !important; }
-            .bg-slate-50 { background-color: #f8fafc !important; }
-            .bg-slate-50\/50 { background-color: rgba(248, 250, 252, 0.5) !important; }
-            .bg-slate-100 { background-color: #f1f5f9 !important; }
+            .bg-ice-tint { background-color: #f8fafc !important; }
+            .bg-ice-tint\/50 { background-color: rgba(248, 250, 252, 0.5) !important; }
+            .bg-table-header { background-color: #f1f5f9 !important; }
             .bg-amber-50\/10 { background-color: rgba(254, 243, 199, 0.1) !important; }
             .bg-slate-900 { background-color: #0f172a !important; }
             .bg-emerald-600 { background-color: #059669 !important; }
             
-            .text-slate-900 { color: #0f172a !important; }
+            .text-text-primary { color: #0f172a !important; }
             .text-slate-950 { color: #020617 !important; }
-            .text-slate-800 { color: #1e293b !important; }
-            .text-slate-900 { color: #2d3748 !important; }
+            .text-text-primary { color: #1e293b !important; }
+            .text-text-primary { color: #2d3748 !important; }
             .text-slate-700 { color: #334155 !important; }
             .text-slate-700 { color: #334155 !important; }
             .text-slate-700 { color: #4a5568 !important; }
-            .text-slate-600 { color: #475569 !important; }
-            .text-slate-500 { color: #64748b !important; }
-            .text-slate-400 { color: #94a3b8 !important; }
+            .text-slate-teal { color: #475569 !important; }
+            .text-text-muted { color: #64748b !important; }
+            .text-text-muted { color: #94a3b8 !important; }
             .text-emerald-800 { color: #065f46 !important; }
             .border-blue-500 { border: 2px solid #3b82f6 !important; }
             .bg-blue-50\/10 { background-color: rgba(239, 246, 255, 0.1) !important; }
@@ -949,7 +960,7 @@ export default function App() {
             }
           </style>
         </head>
-        <body class="p-4 md:p-10 text-slate-800 antialiased bg-slate-50">
+        <body class="p-4 md:p-10 text-text-primary antialiased bg-ice-tint">
           <!-- Control Bar only shown on screen -->
           <div class="no-print max-w-[210mm] mx-auto mb-6 bg-slate-900 border border-slate-950 text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -958,11 +969,11 @@ export default function App() {
               </div>
               <div>
                 <h3 class="font-bold text-xs select-none">দলিল নং: ${toBn(deed.deedNumber)} এর বিবরণী</h3>
-                <p class="text-[10px] text-slate-400">জমির ডিজিটাল রেজিস্ট্রি ও খতিয়ান খাতা</p>
+                <p class="text-[10px] text-text-muted">জমির ডিজিটাল রেজিস্ট্রি ও খতিয়ান খাতা</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer">
+              <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 custom-shadow cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 পিডিএফ ডাউনলোড / প্রিন্ট করুন
               </button>
@@ -973,7 +984,7 @@ export default function App() {
           </div>
 
           <!-- Document sheet (A4 formatted) -->
-          <div class="print-container bg-white p-6 sm:p-12 select-text max-w-[210mm] mx-auto border border-slate-200 shadow-xl rounded-2xl relative">
+          <div class="print-container bg-white p-6 sm:p-12 select-text max-w-[210mm] mx-auto border border-border-subtle shadow-xl rounded-[20px] relative">
             <!-- Double border representing official land documents -->
             <div class="print-border border-4 border-double border-slate-300 p-6 sm:p-8 space-y-6 rounded-lg relative overflow-visible">
               
@@ -985,23 +996,23 @@ export default function App() {
 
               <!-- Header -->
               <div class="text-center space-y-2 pb-5 border-b border-slate-300">
-                ${currentUser?.userType === 'company' && currentUser?.companyName ? `<div class="text-[28px] font-black text-slate-900 tracking-wide mb-1 leading-tight">${currentUser.companyName}</div>` : ''}
-                <h1 class="text-[22px] font-extrabold text-slate-800 tracking-wider">ভূমি হস্তান্তর বিবরণী</h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-extrabold">ডিজিটাল খতিয়ান খাতা ও দাগ হিসাব লেজার মেমো</p>
-                <div class="inline-flex px-3 py-1 rounded bg-slate-100 text-[11px] font-bold text-slate-700 border border-slate-200">
+                ${currentUser?.userType === 'company' && currentUser?.companyName ? `<div class="text-[28px] font-black text-text-primary tracking-wide mb-1 leading-tight">${currentUser.companyName}</div>` : ''}
+                <h1 class="text-[22px] font-extrabold text-text-primary tracking-wider">ভূমি হস্তান্তর বিবরণী</h1>
+                <p class="text-[10px] text-text-muted uppercase tracking-widest font-extrabold">ডিজিটাল খতিয়ান খাতা ও দাগ হিসাব লেজার মেমো</p>
+                <div class="inline-flex px-3 py-1 rounded bg-table-header text-[11px] font-bold text-slate-700 border border-border-subtle">
                   শ্রেণী: ${toBn(docTypeLabel)}
                 </div>
               </div>
 
               <!-- Meta details (Single full-length row) -->
               <div class="text-xs pt-1 print-avoid-break">
-                <div class="border border-slate-200 p-3.5 rounded-lg bg-slate-50/50 flex justify-between items-center gap-4">
+                <div class="border border-border-subtle p-3.5 rounded-lg bg-ice-tint/50 flex justify-between items-center gap-4">
                   <div>
-                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">দলিল নম্বর ও তারিখ</span>
+                    <span class="text-[9px] uppercase font-bold text-text-muted tracking-wider block">দলিল নম্বর ও তারিখ</span>
                     <p class="font-extrabold text-slate-950 text-base mt-1">দলিল নং: ${toBn(deed.deedNumber)}</p>
                   </div>
                   <div>
-                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">দলিলের প্রকৃতি</span>
+                    <span class="text-[9px] uppercase font-bold text-text-muted tracking-wider block">দলিলের প্রকৃতি</span>
                     <p class="font-extrabold text-slate-950 text-base mt-1">${deed.deedNature || '-'}</p>
                   </div>
                   <div class="text-right space-y-0.5">
@@ -1013,26 +1024,26 @@ export default function App() {
 
               <!-- Buyer & Seller details (Guaranteed 2 columns inside layout) -->
               <div class="grid grid-cols-2 gap-4 text-xs print-avoid-break">
-                <div class="border border-slate-200 p-3.5 rounded-lg space-y-1">
-                  <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">ভূমি ক্রেতা (Buyer)</span>
-                  <p class="font-extrabold text-slate-900 text-[13px]">${deed.buyerName}</p>
+                <div class="border border-border-subtle p-3.5 rounded-lg space-y-1">
+                  <span class="text-[9px] uppercase font-bold text-text-muted block tracking-wider">ভূমি ক্রেতা (Buyer)</span>
+                  <p class="font-extrabold text-text-primary text-[13px]">${deed.buyerName}</p>
                 </div>
-                <div class="border border-slate-200 p-3.5 rounded-lg space-y-1">
-                  <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">ভূমি বিক্রেতা (Seller)</span>
-                  <p class="font-extrabold text-slate-900 text-[13px]">${deed.sellerName}</p>
+                <div class="border border-border-subtle p-3.5 rounded-lg space-y-1">
+                  <span class="text-[9px] uppercase font-bold text-text-muted block tracking-wider">ভূমি বিক্রেতা (Seller)</span>
+                  <p class="font-extrabold text-text-primary text-[13px]">${deed.sellerName}</p>
                 </div>
               </div>
 
               <!-- khatians & Dags Details Table -->
               <div class="space-y-2.5 pt-1">
                 <h3 class="text-xs font-bold text-slate-700 border-b pb-1.5 uppercase tracking-wide">খতিয়ান ও সংশ্লিষ্ট দাগ বিবরণী</h3>
-                <table class="w-full text-left border-collapse border border-slate-200 text-xs">
+                <table class="w-full text-left border-collapse border border-border-subtle text-xs">
                   <thead>
-                    <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-300 text-[10px] uppercase">
-                      <th class="p-2.5 border-r border-slate-200">খতিয়ান নম্বর সমূহ</th>
-                      <th class="p-2.5 border-r border-slate-200">সংশ্লিষ্ট দাগ বিবরণী</th>
-                      <th class="p-2.5 border-r border-slate-200">শ্রেণী</th>
-                      <th class="p-2.5 border-r border-slate-200 text-right">নামজারী/কাতে পরিমান</th>
+                    <tr class="bg-ice-tint text-slate-700 font-bold border-b border-slate-300 text-[10px] uppercase">
+                      <th class="p-2.5 border-r border-border-subtle">খতিয়ান নম্বর সমূহ</th>
+                      <th class="p-2.5 border-r border-border-subtle">সংশ্লিষ্ট দাগ বিবরণী</th>
+                      <th class="p-2.5 border-r border-border-subtle">শ্রেণী</th>
+                      <th class="p-2.5 border-r border-border-subtle text-right">নামজারী/কাতে পরিমান</th>
                       <th class="p-2.5 text-right">${deed.type === 'purchase' ? 'ক্রয়কৃত পরিমাণ' : 'বিক্রয় পরিমাণ'}</th>
                     </tr>
                   </thead>
@@ -1040,12 +1051,12 @@ export default function App() {
                     ${khatianTableRows}
                   </tbody>
                   <tfoot>
-                    <tr class="border-t border-slate-200 bg-blue-50/5">
+                    <tr class="border-t border-border-subtle bg-blue-50/5">
                       <td colspan="3" class="p-2"></td>
                       <td colspan="2" class="p-2 text-right">
                         <div class="inline-flex justify-end w-full" style="display: flex; gap: 12px; justify-content: flex-end;">
-                          <div class="border border-slate-300 rounded-lg p-2 bg-slate-50 flex flex-col items-center text-center space-y-0.5" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background-color: #f8fafc; display: flex; flex-direction: column; align-items: center; text-align: center;">
-                            <span class="text-[8px] uppercase font-bold text-slate-500 tracking-wider" style="font-size: 8px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 0.05em;">
+                          <div class="border border-slate-300 rounded-lg p-2 bg-ice-tint flex flex-col items-center text-center space-y-0.5" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background-color: #f8fafc; display: flex; flex-direction: column; align-items: center; text-align: center;">
+                            <span class="text-[8px] uppercase font-bold text-text-muted tracking-wider" style="font-size: 8px; text-transform: uppercase; font-weight: 800; color: #64748b; letter-spacing: 0.05em;">
                               মোট নামজারী/কাতে জমি:
                             </span>
                             <span class="font-bold text-slate-700 text-xs" style="font-weight: 700; color: #334155; font-size: 12px;">${toBn(totalNamjariSum)} শতক</span>
@@ -1064,19 +1075,19 @@ export default function App() {
               </div>
 
               <!-- Signatures region -->
-              <div class="pt-24 flex justify-between items-end gap-6 text-xs text-slate-400 select-none print-avoid-break">
+              <div class="pt-24 flex justify-between items-end gap-6 text-xs text-text-muted select-none print-avoid-break">
                 <div class="text-center space-y-1 w-36">
                   <div class="border-t border-dashed border-slate-300 pt-1 text-slate-700 font-bold">গ্রহীতার স্বাক্ষর</div>
-                  <p class="text-[9px] text-slate-400 font-light">তারিখ সহ</p>
+                  <p class="text-[9px] text-text-muted font-light">তারিখ সহ</p>
                 </div>
                 
-                <div class="text-center text-[9px] text-slate-400 italic font-medium">
+                <div class="text-center text-[9px] text-text-muted italic font-medium">
                   হিসাব জেনারেট সম্পন্ন করেছে ডিজিটাল খতিয়ান খাতা
                 </div>
                 
                 <div class="text-center space-y-1 w-36">
                   <div class="border-t border-dashed border-slate-300 pt-1 text-slate-700 font-bold">পরিচালকের স্বাক্ষর</div>
-                  <p class="text-[9px] text-slate-400 font-light">তারিখ ও সীলমোহর</p>
+                  <p class="text-[9px] text-text-muted font-light">তারিখ ও সীলমোহর</p>
                 </div>
               </div>
 
@@ -1106,14 +1117,16 @@ export default function App() {
   };
 
   // Filter purchased transactions
-  const purchaseTransactions = transactions.filter(t => t.type === 'purchase');
+  const basePurchaseTransactions = transactions.filter(t => t.type === 'purchase');
+  const purchaseTransactions = filterTransactionsByHierarchy(basePurchaseTransactions, purchaseFilter);
+  const purchaseFilteredSummary = calculateFilteredSummary(purchaseTransactions, purchaseFilter);
   
   // Calculate analytics for purchases
   const totalPurchaseDeeds = purchaseTransactions.length;
   const uniquePurchaseMouzas = new Set(purchaseTransactions.map(t => t.mouza.trim().toLowerCase())).size;
-  const totalPurchaseAmount = purchaseTransactions.reduce((sum, t) => sum + (Number(t.transactionAmount) || 0), 0);
+  const totalPurchaseAmount = purchaseFilteredSummary.totalPurchased;
 
-  const filteredPurchases = purchaseTransactions.filter(t => {
+  const searchFilteredPurchases = purchaseTransactions.filter(t => {
     const term = purchaseSearchTerm.trim().toLowerCase();
     if (!term) return true;
     return (
@@ -1136,15 +1149,21 @@ export default function App() {
     );
   });
 
+  const filteredPurchases = searchFilteredPurchases.filter(t => 
+    purchaseMouzaFilter ? t.mouza === purchaseMouzaFilter : true
+  );
+
   // Filter sold transactions
-  const saleTransactions = transactions.filter(t => t.type === 'sale');
+  const baseSaleTransactions = transactions.filter(t => t.type === 'sale');
+  const saleTransactions = filterTransactionsByHierarchy(baseSaleTransactions, saleFilter);
+  const saleFilteredSummary = calculateFilteredSummary(saleTransactions, saleFilter);
   
   // Calculate analytics for sales
   const totalSaleDeeds = saleTransactions.length;
   const uniqueSaleMouzas = new Set(saleTransactions.map(t => t.mouza.trim().toLowerCase())).size;
-  const totalSaleAmount = saleTransactions.reduce((sum, t) => sum + (Number(t.transactionAmount) || 0), 0);
+  const totalSaleAmount = saleFilteredSummary.totalSold;
 
-  const filteredSales = saleTransactions.filter(t => {
+  const searchFilteredSales = saleTransactions.filter(t => {
     const term = saleSearchTerm.trim().toLowerCase();
     if (!term) return true;
     return (
@@ -1167,6 +1186,10 @@ export default function App() {
     );
   });
 
+  const filteredSales = searchFilteredSales.filter(t => 
+    saleMouzaFilter ? t.mouza === saleMouzaFilter : true
+  );
+
   const handleShortcutSearch = (type: 'khatian' | 'dag', value: string) => {
     if (type === 'khatian') {
       setInitialSearchQuery({ khatian: value });
@@ -1180,7 +1203,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
         <RefreshCcw className="text-emerald-500 animate-spin" size={32} />
-        <p className="text-slate-400 mt-3 text-xs font-sans">ভূমি রেজিস্ট্রি সিস্টেম লোড হচ্ছে...</p>
+        <p className="text-text-muted mt-3 text-xs font-sans">ভূমি রেজিস্ট্রি সিস্টেম লোড হচ্ছে...</p>
       </div>
     );
   }
@@ -1194,7 +1217,7 @@ export default function App() {
   }
 
   return (
-    <div className="fixed inset-0 w-full flex flex-col-reverse md:flex-row font-sans text-slate-800 antialiased overflow-hidden print:static print:h-auto print:overflow-visible print:block">
+    <div className="fixed inset-0 w-full flex flex-col-reverse md:flex-row font-sans text-text-primary antialiased overflow-hidden print:static print:h-auto print:overflow-visible print:block">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--color-main-bg)] relative print:h-auto print:overflow-visible print:block print:bg-white">
@@ -1224,7 +1247,7 @@ export default function App() {
           isSyncing={isSyncing}
         />
         
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 print:p-0 print:overflow-visible print:block print:w-full">
+        <main key={activeTab} className="flex-1 overflow-y-auto p-6 lg:p-8 print:p-0 print:overflow-visible print:block print:w-full animate-fade-in">
         {activeTab === 'profile' && (
           <SettingsTab
             currentUser={currentUser}
@@ -1259,10 +1282,11 @@ export default function App() {
             onEmptyTrash={handleEmptyTrash}
           />
         )}
-
         {activeTab === 'dashboard' && (
           <Dashboard 
             transactions={transactions} 
+            globalFilter={dashboardFilter}
+            setGlobalFilter={setDashboardFilter}
             onNavigateToTab={setActiveTab}
             onSetSearchQuery={handleRequestSearchQuery}
             onEditTransaction={handleEditTransaction}
@@ -1284,7 +1308,7 @@ export default function App() {
           <>
             {(isAddingPurchase || (editingTransaction && editingTransaction.type === 'purchase')) && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 md:p-4 overflow-hidden md:overflow-y-auto">
-                <div className="bg-emerald-50 rounded-none md:rounded-2xl border-0 md:border md:border-emerald-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
+                <div className="bg-emerald-50 rounded-none md:rounded-[20px] border-0 md:border md:border-emerald-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
                   <TransactionForm 
                     type="purchase" 
                     onSave={handleSaveTransaction} 
@@ -1301,20 +1325,20 @@ export default function App() {
             )}
             <div className="space-y-6">
               {/* Header block with statistics & "জমি ক্রয় ইনপুট" button */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-row items-center justify-between gap-4">
+              <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow flex flex-row items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-bold text-slate-900 font-sans flex items-center gap-2">
-                    <PlusCircle className="text-teal-600 hidden sm:block" size={20} />
+                  <h2 className="text-xl font-bold text-text-primary font-sans flex items-center gap-2">
+                    <PlusCircle className="text-slate-teal hidden sm:block" size={20} />
                     ক্রয়কৃত জমির তথ্য
                   </h2>
-                  <p className="text-xs text-slate-500 hidden sm:block">
+                  <p className="text-xs text-text-muted hidden sm:block">
                     আপনার মৌজা ও দলিল ভিত্তিক সকল জমি ক্রয় এন্ট্রির হিসাব এক নজরে পর্যবেক্ষণ করুন।
                   </p>
                 </div>
 
                 <button
                   onClick={() => setIsAddingPurchase(true)}
-                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 transition-all rounded-xl shadow-md cursor-pointer select-none shrink-0"
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-slate-teal hover:bg-[#1D3B47] active:scale-95 transition-all rounded-full custom-shadow cursor-pointer select-none shrink-0"
                 >
                   <PlusCircle size={15} />
                   <span className="hidden sm:inline">জমি ক্রয় ইনপুট</span>
@@ -1322,50 +1346,109 @@ export default function App() {
                 </button>
               </div>
 
+
               {/* Purchase Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl border border-teal-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center shrink-0 border border-teal-100/50 mb-1">
+                <div className="bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-mint-pill0/5 rounded-full blur-2xl group-hover:bg-mint-pill0/10 transition-colors" />
+                  <div className="w-12 h-12 bg-mint-pill text-slate-teal rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <FileText size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(totalPurchaseDeeds)}</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট ক্রয়কৃত দলিল সংখ্যা</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(totalPurchaseDeeds)}</div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট ক্রয়কৃত দলিল সংখ্যা</div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-teal-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center shrink-0 border border-teal-100/50 mb-1">
+                <div className="bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-mint-pill0/5 rounded-full blur-2xl group-hover:bg-mint-pill0/10 transition-colors" />
+                  <div className="w-12 h-12 bg-mint-pill text-slate-teal rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <MapPin size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(uniquePurchaseMouzas)}</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট মৌজা সংখ্যা</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(uniquePurchaseMouzas)}</div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট মৌজা সংখ্যা</div>
                   </div>
                 </div>
 
-                <div className="col-span-2 md:col-span-1 bg-white rounded-2xl border border-teal-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center shrink-0 border border-teal-100/50 mb-1">
+                <div className="col-span-2 md:col-span-1 bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-mint-pill0/5 rounded-full blur-2xl group-hover:bg-mint-pill0/10 transition-colors" />
+                  <div className="w-12 h-12 bg-mint-pill text-slate-teal rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <Layers size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(totalPurchaseAmount)} <span className="text-sm font-bold text-slate-500">শতক</span></div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট ক্রয়কৃত জমির পরিমান</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(totalPurchaseAmount)} <span className="text-sm font-bold text-text-muted">শতক</span></div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট ক্রয়কৃত জমির পরিমান</div>
                   </div>
                 </div>
               </div>
 
+              <GlobalFilterSlicer 
+                transactions={transactions}
+                filterState={purchaseFilter}
+                setFilterState={setPurchaseFilter}
+              />
+
+              {/* Filter specific explicit summary banner for Purchases */}
+              {(purchaseFilter.mouza || purchaseFilter.khatian || purchaseFilter.dag) && (
+                <div className="bg-ice-tint border-2 border-border-subtle rounded-[20px] p-4 custom-shadow">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-mint-pill text-slate-teal rounded-lg">
+                        <Filter size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-text-primary">নির্বাচিত জমির মোট ক্রয়</h3>
+                        <p className="text-xs text-slate-teal mt-1 flex flex-wrap gap-1">
+                          {purchaseFilter.mouza && <span className="bg-white/60 px-1.5 py-0.5 rounded">মৌজা: <strong>{purchaseFilter.mouza}</strong></span>}
+                          {purchaseFilter.khatian && <span className="bg-white/60 px-1.5 py-0.5 rounded">খতিয়ান: <strong>{purchaseFilter.khatian}</strong></span>}
+                          {purchaseFilter.dag && <span className="bg-white/60 px-1.5 py-0.5 rounded">দাগ: <strong>{purchaseFilter.dag}</strong></span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-white px-5 py-3 rounded-xl border border-border-subtle custom-shadow text-right min-w-[150px]">
+                      <div className="text-xl font-black text-slate-teal font-mono">
+                        {toBengaliNumber(purchaseFilteredSummary.totalPurchased)} <span className="text-sm">শতক</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <MouzaSummaryTable 
+                title="মৌজাভিত্তিক ক্রয়কৃত জমির সারাংশ"
+                transactions={searchFilteredPurchases}
+                selectedMouza={purchaseMouzaFilter}
+                onSelectMouza={setPurchaseMouzaFilter}
+                onClearFilter={() => setPurchaseMouzaFilter(null)}
+                type="purchase"
+              />
+
+              {purchaseMouzaFilter && (
+                <div className="bg-ice-tint border border-border-subtle rounded-xl p-3 mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-teal">
+                      <MapPin size={16} />
+                    </span>
+                    <span className="text-sm font-bold text-text-primary">বর্তমান ফিল্টার: {purchaseMouzaFilter}</span>
+                  </div>
+                  <button 
+                    onClick={() => setPurchaseMouzaFilter(null)}
+                    className="text-xs font-bold text-slate-teal bg-white border border-border-subtle px-3 py-1.5 rounded-lg hover:bg-mint-pill transition-colors custom-shadow cursor-pointer"
+                  >
+                    সব দেখুন (Clear)
+                  </button>
+                </div>
+              )}
+
               {/* Purchase entries list */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="p-5 border-b border-slate-200 flex flex-col items-center justify-center gap-4 bg-slate-50/50">
-                  <div className="text-slate-800 font-bold text-sm text-center">
+              <div className="bg-white rounded-[20px] border border-border-subtle custom-shadow overflow-hidden">
+                <div className="p-5 border-b border-border-subtle flex flex-col items-center justify-center gap-4 bg-ice-tint/50">
+                  <div className="text-text-primary font-bold text-sm text-center">
                     ক্রয় দলিলের তালিকা ({toBengaliNumber(filteredPurchases.length)} টি দলিল)
                   </div>
                   <div className="relative w-full sm:w-64">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-text-muted">
                       <Search size={14} />
                     </span>
                     <input
@@ -1373,15 +1456,15 @@ export default function App() {
                       placeholder="দলিল, মৌজা, খতিয়ান বা দাগ দিয়ে খুঁজুন..."
                       value={purchaseSearchTerm}
                       onChange={(e) => setPurchaseSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-1.5 text-xs text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:border-emerald-600 w-full bg-white"
+                      className="pl-9 pr-4 py-1.5 text-xs text-text-primary rounded-lg border border-border-subtle focus:outline-none focus:border-emerald-600 w-full bg-white"
                     />
                   </div>
                 </div>
 
                 <div className="overflow-x-auto font-sans">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-left border-collapse text-[10pt]">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                      <tr className="bg-emerald-50 border-b border-emerald-200 text-emerald-800 font-bold">
                         <th className="py-1.5 px-4 w-10 text-center"></th>
                         <th className="py-1.5 px-4 text-left">দলিল নম্বর</th>
                         <th className="py-1.5 px-4 text-left">দলিলের প্রকৃতি</th>
@@ -1395,7 +1478,7 @@ export default function App() {
                     <tbody className="divide-y divide-slate-200">
                       {filteredPurchases.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400 font-light text-sm">
+                          <td colSpan={8} className="py-12 text-center text-text-muted font-light text-sm">
                             কোন ক্রয়কৃত জমির রেকর্ড অনুসন্ধানের সাথে মেলেনি বা যোগ করা হয়নি।
                           </td>
                         </tr>
@@ -1407,43 +1490,43 @@ export default function App() {
                             <React.Fragment key={t.id}>
                               <tr 
                                 id={`tx-${t.id}`}
-                                className={`transition-all duration-500 ${highlightedTxId === t.id ? 'bg-indigo-50 shadow-inner' : 'hover:bg-slate-50/50'}`}
+                                className={`transition-all duration-300 ${highlightedTxId === t.id ? 'bg-ice-tint shadow-inner' : 'hover:bg-emerald-50'}`}
                               >
                                 <td className={`py-1.5 px-4 text-center ${highlightedTxId === t.id ? 'border-l-4 border-indigo-500' : ''}`}>
                                   <button
                                     onClick={() => setExpandedPurchases(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
-                                    className="p-1 rounded hover:bg-slate-100 text-slate-500 cursor-pointer"
+                                    className="p-1 rounded hover:bg-table-header text-text-muted cursor-pointer"
                                   >
                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                   </button>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-semibold text-slate-900 text-sm">দলিল নং {toBengaliNumber(t.deedNumber)}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">{toBengaliNumber(t.date)}</div>
+                                  <div className="font-bold text-text-primary">দলিল নং {toBengaliNumber(t.deedNumber)}</div>
+                                  <div className="text-[9px] text-text-muted font-mono mt-0.5">{toBengaliNumber(t.date)}</div>
                                 </td>
-                                <td className="py-1.5 px-4 align-middle text-left font-medium text-slate-600 text-[11px]">
+                                <td className="py-1.5 px-4 align-middle text-left font-bold text-text-primary">
                                   {t.deedNature || '-'}
                                 </td>
                                 <td className="py-1.5 px-4 align-middle text-left">
-                                  <div className="text-slate-900 font-bold flex items-center justify-start gap-1">
-                                    <MapPin size={11} className="text-slate-500 shrink-0" />
+                                  <div className="text-text-primary font-bold flex items-center justify-start gap-1">
+                                    <MapPin size={11} className="text-text-muted shrink-0" />
                                     <span>{t.mouza.replace(/\s*মৌজা\s*$/, '')}</span>
                                   </div>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-bold text-slate-900">{t.buyerName}</div>
+                                  <div className="font-bold text-text-primary">{t.buyerName}</div>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-bold text-slate-900">{t.sellerName}</div>
+                                  <div className="font-bold text-text-primary">{t.sellerName}</div>
                                 </td>
-                                <td className="py-1.5 px-4 text-center font-mono font-bold text-sm text-emerald-700">
+                                <td className="py-1.5 px-4 text-center font-mono font-bold text-[10pt] text-emerald-700">
                                   +{toBengaliNumber(t.transactionAmount.toFixed(2))}
                                 </td>
                                 <td className="py-1.5 px-4 text-center">
                                   <div className="flex items-center justify-center gap-3 font-sans">
                                     <button
                                       onClick={() => handleShortcutSearch('khatian', t.khatians[0]?.csKhatian || t.khatians[0]?.saKhatian || '')}
-                                      className="text-indigo-700 hover:text-indigo-900 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-slate-teal hover:text-text-primary duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="খতিয়ান খতিয়ে অনুসন্ধান"
                                     >
                                       <Search size={12} />
@@ -1459,7 +1542,7 @@ export default function App() {
                                     </button>
                                     <button
                                       onClick={() => setPrintingDeed(t)}
-                                      className="text-slate-700 hover:text-slate-900 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-slate-700 hover:text-text-primary duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="পিডিএফ সেভ করুন"
                                     >
                                       <FileDown size={11} />
@@ -1467,7 +1550,7 @@ export default function App() {
                                     </button>
                                     <button
                                       onClick={() => handleDeleteTransaction(t.id)}
-                                      className="text-rose-600 hover:text-rose-800 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-rose-700 hover:text-rose-800 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="ডিলিট করুন"
                                     >
                                       <Trash2 size={11} />
@@ -1479,127 +1562,14 @@ export default function App() {
 
                               {/* Expanded Row component */}
                               {isExpanded && (
-                                <tr className="bg-slate-50/40">
-                                  <td colSpan={8} className="py-3 px-4 pb-4">
-                                    <div className="ml-10 px-5 py-4 bg-white rounded-xl border border-slate-200 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-5">
-                                      {/* Left block: Khatians and plots */}
-                                      <div className="space-y-3">
-                                        <div className="flex items-center justify-between text-xs text-slate-700 font-bold border-b border-slate-100 pb-2">
-                                          <span className="flex items-center gap-1.5">
-                                            <Layers size={14} className="text-teal-600" />
-                                            খতিয়ান ও দাগ বিবরণী ({toBengaliNumber(t.khatians.length)}  টি খতিয়ান)
-                                          </span>
-                                          <span className="text-[10px] text-slate-400 font-light">শতক এককে হিসাব</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                          {t.khatians.map((k, kIdx) => {
-                                            const activeKLabels: string[] = [];
-                                            if (k.hasCS && k.csKhatian) activeKLabels.push(`সি.এস: ${toBengaliNumber(k.csKhatian)}`);
-                                            if (k.hasSA && k.saKhatian) activeKLabels.push(`এস.এ: ${toBengaliNumber(k.saKhatian)}`);
-                                            if (k.hasRS && k.rsKhatian) activeKLabels.push(`আর.এস: ${toBengaliNumber(k.rsKhatian)}`);
-                                            if (k.hasNamjari && k.namjariKhatian) activeKLabels.push(`নামজারী: ${toBengaliNumber(k.namjariKhatian)}`);
-                                            
-                                            if (activeKLabels.length === 0) {
-                                              if (k.csKhatian) activeKLabels.push(`সি.এস: ${toBengaliNumber(k.csKhatian)}`);
-                                              if (k.saKhatian) activeKLabels.push(`এস.এ: ${toBengaliNumber(k.saKhatian)}`);
-                                              if (k.rsKhatian) activeKLabels.push(`আর.এস: ${toBengaliNumber(k.rsKhatian)}`);
-                                              if (k.namjariKhatian) activeKLabels.push(`নামজারী: ${toBengaliNumber(k.namjariKhatian)}`);
-                                            }
-
-                                            return (
-                                              <div key={k.id || kIdx} className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                                                <div className="font-bold text-slate-800 text-xs flex flex-wrap items-center gap-1.5 border-b border-dashed border-slate-200 pb-1.5">
-                                                  <span className="text-[10px] uppercase font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">খতিয়ান</span>
-                                                  <span>{activeKLabels.join(', ')}</span>
-                                                </div>
-                                                <div className="space-y-1.5 text-[11px]">
-                                                  {k.dags.map((d, dIdx) => {
-                                                    const activeDLabels: string[] = [];
-                                                    if (d.hasCS && d.csDag) activeDLabels.push(`সি.এস দাগ: ${toBengaliNumber(d.csDag)}`);
-                                                    if (d.hasSA && d.saDag) activeDLabels.push(`এস.এ দাগ: ${toBengaliNumber(d.saDag)}`);
-                                                    if (d.hasRS && d.rsDag) activeDLabels.push(`আর.এস দাগ: ${toBengaliNumber(d.rsDag)}`);
-                                                    if (d.landClass) activeDLabels.push(`শ্রেণী: ${d.landClass}`);
-
-                                                    if (activeDLabels.length === 0) {
-                                                      if (d.csDag) activeDLabels.push(`সি.এস দাগ: ${toBengaliNumber(d.csDag)}`);
-                                                      if (d.saDag) activeDLabels.push(`এস.এ দাগ: ${toBengaliNumber(d.saDag)}`);
-                                                      if (d.rsDag) activeDLabels.push(`আর.এস দাগ: ${toBengaliNumber(d.rsDag)}`);
-                                                      if (d.landClass) activeDLabels.push(`শ্রেণী: ${d.landClass}`);
-                                                    }
-
-                                                    return (
-                                                      <div key={d.id || dIdx} className="flex justify-between items-center hover:bg-slate-100/50 p-1 rounded transition-colors">
-                                                        <span className="font-medium text-slate-600">{activeDLabels.join(', ')}</span>
-                                                        <div className="flex items-center gap-4">
-                                                          <div className="flex items-center gap-1 text-slate-500">
-                                                            <span>জমির পরিমাণ:</span>
-                                                            <strong className="text-slate-700 font-mono">{toBengaliNumber(d.amount)} শতক</strong>
-                                                          </div>
-                                                          <button
-                                                            onClick={() => handleShortcutSearch('dag', d.csDag || d.saDag || d.rsDag || '')}
-                                                            className="text-[9px] text-slate-400 hover:text-emerald-700 font-medium border border-slate-200 hover:border-emerald-300 rounded px-1.5 py-0.5 bg-white shadow-xs ml-1"
-                                                          >
-                                                            ইতিহাস
-                                                          </button>
-                                                        </div>
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-
-                                      {/* Right block: Attachments & Notes */}
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold border-b border-slate-100 pb-2">
-                                            <Info size={14} className="text-indigo-600" />
-                                            <span>দলিল ও নথিপত্র স্ক্যান কপি ({(t.attachments && t.attachments.length) ? toBengaliNumber(t.attachments.length) : '০'} টি ফাইল)</span>
-                                          </div>
-                                          {t.attachments && t.attachments.length > 0 ? (
-                                            <div className="grid grid-cols-1 gap-1.5 text-[11px]">
-                                              {t.attachments.map((file) => (
-                                                <div key={file.id} className="flex justify-between items-center bg-slate-100 border border-slate-200 rounded-lg p-2 hover:bg-slate-100 transition-colors">
-                                                  <span className="truncate max-w-[130px] sm:max-w-[160px] font-medium text-slate-700" title={file.name}>
-                                                    {file.name}
-                                                  </span>
-                                                  <div className="flex items-center gap-1.5 text-[10px]">
-                                                    <span className="text-[9px] text-slate-400 font-mono shrink-0">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                                                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 shrink-0">
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => openAttachmentInNewTab(file)}
-                                                        className="text-[10px] text-teal-700 hover:text-teal-950 font-bold hover:underline cursor-pointer flex items-center gap-0.5 select-none"
-                                                      >
-                                                        <Eye size={11} />
-                                                        দেখুন
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          ) : (
-                                            <div className="text-[11px] text-slate-500 italic py-2 text-center border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                                              সংযুক্ত স্ক্যান করা দলিলের ফাইল পাওয়া যায়নি।
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Notes display */}
-                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1.5">
-                                          <div className="text-slate-700 font-bold text-xs flex items-center gap-1">
-                                            <FileText size={13} className="text-slate-500" />
-                                            <span>অতিরিক্ত নোট ও মন্তব্য</span>
-                                          </div>
-                                          <p className="text-[11px] text-slate-600 leading-relaxed font-sans">
-                                            {t.notes ? t.notes : 'এই ক্রয় দলিলের সাথে বিশেষ কোনো বাড়তি নোট বা মন্তব্য উল্লেখ করা হয়নি।'}
-                                          </p>
-                                        </div>
-                                      </div>
+                                <tr className="bg-ice-tint/40">
+                                  <td colSpan={8} className="p-0">
+                                    <div className="py-3 px-4 pb-4">
+                                      <DeedDetailPanel 
+                                        transaction={t}
+                                        openAttachmentInNewTab={openAttachmentInNewTab}
+                                        handleShortcutSearch={handleShortcutSearch}
+                                      />
                                     </div>
                                   </td>
                                 </tr>
@@ -1620,7 +1590,7 @@ export default function App() {
           <>
             {(isAddingSale || (editingTransaction && editingTransaction.type === 'sale')) && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 md:p-4 overflow-hidden md:overflow-y-auto">
-                <div className="bg-rose-50 rounded-none md:rounded-2xl border-0 md:border md:border-rose-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
+                <div className="bg-alert-peach rounded-none md:rounded-[20px] border-0 md:border md:border-rose-200 shadow-2xl p-4 md:p-6 space-y-6 w-full max-w-5xl h-full md:h-auto max-h-screen md:max-h-[90vh] my-0 md:my-8 relative animate-in zoom-in-95 duration-200 overflow-y-auto overflow-x-hidden">
                   <TransactionForm 
                     type="sale" 
                     onSave={handleSaveTransaction} 
@@ -1637,20 +1607,20 @@ export default function App() {
             )}
             <div className="space-y-6">
               {/* Header block with "জমি বিক্রয় ইনপুট" button */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-row items-center justify-between gap-4">
+              <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow flex flex-row items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-bold text-slate-900 font-sans flex items-center gap-2">
-                    <MinusCircle className="text-rose-600 hidden sm:block" size={20} />
+                  <h2 className="text-xl font-bold text-text-primary font-sans flex items-center gap-2">
+                    <MinusCircle className="text-rose-700 hidden sm:block" size={20} />
                     বিক্রয়কৃত জমির তথ্য
                   </h2>
-                  <p className="text-xs text-slate-500 hidden sm:block">
+                  <p className="text-xs text-text-muted hidden sm:block">
                     আপনার মৌজা ও দলিল ভিত্তিক সকল জমি বিক্রয় এন্ট্রির হিসাব এক নজরে পর্যবেক্ষণ করুন।
                   </p>
                 </div>
 
                 <button
                   onClick={() => setIsAddingSale(true)}
-                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all rounded-xl shadow-md cursor-pointer select-none shrink-0"
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold bg-alert-peach text-rose-700 border border-alert-border hover:bg-[#f0c4b8] active:scale-95 transition-all rounded-full custom-shadow cursor-pointer select-none shrink-0"
                 >
                   <MinusCircle size={15} />
                   <span className="hidden sm:inline">জমি বিক্রয় ইনপুট</span>
@@ -1658,50 +1628,109 @@ export default function App() {
                 </button>
               </div>
 
+
               {/* Sale Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl border border-rose-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 mb-1">
+                <div className="bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-alert-peach0/5 rounded-full blur-2xl group-hover:bg-[#f0c4b8]/10 transition-colors" />
+                  <div className="w-12 h-12 bg-alert-peach text-rose-700 rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <FileText size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(totalSaleDeeds)}</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট বিক্রয়কৃত দলিল সংখ্যা</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(totalSaleDeeds)}</div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট বিক্রয়কৃত দলিল সংখ্যা</div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-rose-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 mb-1">
+                <div className="bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-alert-peach0/5 rounded-full blur-2xl group-hover:bg-[#f0c4b8]/10 transition-colors" />
+                  <div className="w-12 h-12 bg-alert-peach text-rose-700 rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <MapPin size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(uniqueSaleMouzas)}</div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট মৌজা সংখ্যা</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(uniqueSaleMouzas)}</div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট মৌজা সংখ্যা</div>
                   </div>
                 </div>
 
-                <div className="col-span-2 md:col-span-1 bg-white rounded-2xl border border-rose-100 p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
-                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-colors" />
-                  <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 mb-1">
+                <div className="col-span-2 md:col-span-1 bg-white rounded-[20px] border border-border-subtle p-5 flex flex-col items-center justify-center text-center gap-2 relative overflow-hidden group">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-alert-peach0/5 rounded-full blur-2xl group-hover:bg-[#f0c4b8]/10 transition-colors" />
+                  <div className="w-12 h-12 bg-alert-peach text-rose-700 rounded-[20px] flex items-center justify-center shrink-0 border border-border-subtle/50 mb-1">
                     <Layers size={20} />
                   </div>
                   <div>
-                    <div className="text-2xl font-black text-slate-800 tracking-tight font-mono">{toBengaliNumber(totalSaleAmount)} <span className="text-sm font-bold text-slate-500">শতক</span></div>
-                    <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">মোট বিক্রয়কৃত জমির পরিমান</div>
+                    <div className="text-2xl font-black text-text-primary tracking-tight font-mono">{toBengaliNumber(totalSaleAmount)} <span className="text-sm font-bold text-text-muted">শতক</span></div>
+                    <div className="text-[10px] sm:text-xs font-bold text-text-muted uppercase tracking-wider">মোট বিক্রয়কৃত জমির পরিমান</div>
                   </div>
                 </div>
               </div>
 
+              <GlobalFilterSlicer 
+                transactions={transactions}
+                filterState={saleFilter}
+                setFilterState={setSaleFilter}
+              />
+
+              {/* Filter specific explicit summary banner for Sales */}
+              {(saleFilter.mouza || saleFilter.khatian || saleFilter.dag) && (
+                <div className="bg-ice-tint border-2 border-border-subtle rounded-[20px] p-4 custom-shadow">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-mint-pill text-slate-teal rounded-lg">
+                        <Filter size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-text-primary">নির্বাচিত জমির মোট বিক্রয়</h3>
+                        <p className="text-xs text-slate-teal mt-1 flex flex-wrap gap-1">
+                          {saleFilter.mouza && <span className="bg-white/60 px-1.5 py-0.5 rounded">মৌজা: <strong>{saleFilter.mouza}</strong></span>}
+                          {saleFilter.khatian && <span className="bg-white/60 px-1.5 py-0.5 rounded">খতিয়ান: <strong>{saleFilter.khatian}</strong></span>}
+                          {saleFilter.dag && <span className="bg-white/60 px-1.5 py-0.5 rounded">দাগ: <strong>{saleFilter.dag}</strong></span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-white px-5 py-3 rounded-xl border border-border-subtle custom-shadow text-right min-w-[150px]">
+                      <div className="text-xl font-black text-rose-700 font-mono">
+                        {toBengaliNumber(saleFilteredSummary.totalSold)} <span className="text-sm">শতক</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <MouzaSummaryTable 
+                title="মৌজাভিত্তিক বিক্রিত জমির সারাংশ"
+                transactions={searchFilteredSales}
+                selectedMouza={saleMouzaFilter}
+                onSelectMouza={setSaleMouzaFilter}
+                onClearFilter={() => setSaleMouzaFilter(null)}
+                type="sale"
+              />
+
+              {saleMouzaFilter && (
+                <div className="bg-ice-tint border border-border-subtle rounded-xl p-3 mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-teal">
+                      <MapPin size={16} />
+                    </span>
+                    <span className="text-sm font-bold text-text-primary">বর্তমান ফিল্টার: {saleMouzaFilter}</span>
+                  </div>
+                  <button 
+                    onClick={() => setSaleMouzaFilter(null)}
+                    className="text-xs font-bold text-slate-teal bg-white border border-border-subtle px-3 py-1.5 rounded-lg hover:bg-mint-pill transition-colors custom-shadow cursor-pointer"
+                  >
+                    সব দেখুন (Clear)
+                  </button>
+                </div>
+              )}
+
               {/* Sale entries list */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-                <div className="p-5 border-b border-slate-200 flex flex-col items-center justify-center gap-4 bg-slate-50/50">
-                  <div className="text-slate-800 font-bold text-sm text-center">
+              <div className="bg-white rounded-[20px] border border-border-subtle custom-shadow overflow-hidden">
+                <div className="p-5 border-b border-border-subtle flex flex-col items-center justify-center gap-4 bg-ice-tint/50">
+                  <div className="text-text-primary font-bold text-sm text-center">
                     বিক্রয় দলিলের তালিকা ({toBengaliNumber(filteredSales.length)} টি দলিল)
                   </div>
                   <div className="relative w-full sm:w-64">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-text-muted">
                       <Search size={14} />
                     </span>
                     <input
@@ -1709,15 +1738,15 @@ export default function App() {
                       placeholder="দলিল, মৌজা, খতিয়ান বা দাগ দিয়ে খুঁজুন..."
                       value={saleSearchTerm}
                       onChange={(e) => setSaleSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-1.5 text-xs text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:border-rose-600 w-full bg-white"
+                      className="pl-9 pr-4 py-1.5 text-xs text-text-primary rounded-lg border border-border-subtle focus:outline-none focus:border-rose-600 w-full bg-white"
                     />
                   </div>
                 </div>
 
                 <div className="overflow-x-auto font-sans">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-left border-collapse text-[10pt]">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                      <tr className="bg-alert-peach border-b border-rose-200 text-rose-800 font-bold">
                         <th className="py-1.5 px-4 w-10 text-center"></th>
                         <th className="py-1.5 px-4 text-left">দলিল নম্বর</th>
                         <th className="py-1.5 px-4 text-left">দলিলের প্রকৃতি</th>
@@ -1731,7 +1760,7 @@ export default function App() {
                     <tbody className="divide-y divide-slate-200">
                       {filteredSales.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400 font-light text-sm">
+                          <td colSpan={8} className="py-12 text-center text-text-muted font-light text-sm">
                             কোন বিক্রয়কৃত জমির রেকর্ড অনুসন্ধানের সাথে মেলেনি বা যোগ করা হয়নি।
                           </td>
                         </tr>
@@ -1743,43 +1772,43 @@ export default function App() {
                             <React.Fragment key={t.id}>
                               <tr 
                                 id={`tx-${t.id}`}
-                                className={`transition-all duration-500 ${highlightedTxId === t.id ? 'bg-rose-50 shadow-inner' : 'hover:bg-slate-50/50'}`}
+                                className={`transition-all duration-300 ${highlightedTxId === t.id ? 'bg-alert-peach shadow-inner' : 'hover:bg-alert-peach'}`}
                               >
                                 <td className={`py-1.5 px-4 text-center ${highlightedTxId === t.id ? 'border-l-4 border-rose-500' : ''}`}>
                                   <button
                                     onClick={() => setExpandedSales(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
-                                    className="p-1 rounded hover:bg-slate-100 text-slate-500 cursor-pointer"
+                                    className="p-1 rounded hover:bg-table-header text-text-muted cursor-pointer"
                                   >
                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                   </button>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-semibold text-slate-900 text-sm">দলিল নং {toBengaliNumber(t.deedNumber)}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">{toBengaliNumber(t.date)}</div>
+                                  <div className="font-bold text-text-primary">দলিল নং {toBengaliNumber(t.deedNumber)}</div>
+                                  <div className="text-[9px] text-text-muted font-mono mt-0.5">{toBengaliNumber(t.date)}</div>
                                 </td>
-                                <td className="py-1.5 px-4 align-middle text-left font-medium text-slate-600 text-[11px]">
+                                <td className="py-1.5 px-4 align-middle text-left font-bold text-text-primary">
                                   {t.deedNature || '-'}
                                 </td>
                                 <td className="py-1.5 px-4 align-middle text-left">
-                                  <div className="text-slate-900 font-bold flex items-center justify-start gap-1">
-                                    <MapPin size={11} className="text-slate-500 shrink-0" />
+                                  <div className="text-text-primary font-bold flex items-center justify-start gap-1">
+                                    <MapPin size={11} className="text-text-muted shrink-0" />
                                     <span>{t.mouza.replace(/\s*মৌজা\s*$/, '')}</span>
                                   </div>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-bold text-slate-900">{t.buyerName}</div>
+                                  <div className="font-bold text-text-primary">{t.buyerName}</div>
                                 </td>
                                 <td className="py-1.5 px-4">
-                                  <div className="font-bold text-slate-900">{t.sellerName}</div>
+                                  <div className="font-bold text-text-primary">{t.sellerName}</div>
                                 </td>
-                                <td className="py-1.5 px-4 text-center font-mono font-bold text-sm text-rose-600">
+                                <td className="py-1.5 px-4 text-center font-mono font-bold text-[10pt] text-rose-700">
                                   -{toBengaliNumber(t.transactionAmount.toFixed(2))}
                                 </td>
                                 <td className="py-1.5 px-4 text-center">
                                   <div className="flex items-center justify-center gap-3 font-sans">
                                     <button
                                       onClick={() => handleShortcutSearch('khatian', t.khatians[0]?.csKhatian || t.khatians[0]?.saKhatian || '')}
-                                      className="text-indigo-700 hover:text-indigo-900 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-slate-teal hover:text-text-primary duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="খতিয়ান খতিয়ে অনুসন্ধান"
                                     >
                                       <Search size={12} />
@@ -1795,7 +1824,7 @@ export default function App() {
                                     </button>
                                     <button
                                       onClick={() => setPrintingDeed(t)}
-                                      className="text-slate-700 hover:text-slate-900 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-slate-700 hover:text-text-primary duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="পিডিএফ সেভ করুন"
                                     >
                                       <FileDown size={11} />
@@ -1803,7 +1832,7 @@ export default function App() {
                                     </button>
                                     <button
                                       onClick={() => handleDeleteTransaction(t.id)}
-                                      className="text-rose-600 hover:text-rose-800 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                                      className="text-rose-700 hover:text-rose-800 duration-100 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
                                       title="ডিলিট করুন"
                                     >
                                       <Trash2 size={11} />
@@ -1815,125 +1844,14 @@ export default function App() {
 
                               {/* Expanded Row component */}
                               {isExpanded && (
-                                <tr className="bg-slate-50/40">
-                                  <td colSpan={8} className="py-3 px-4 pb-4">
-                                    <div className="ml-10 px-5 py-4 bg-white rounded-xl border border-slate-200 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-5">
-                                      {/* Left block: Khatians and plots */}
-                                      <div className="space-y-3">
-                                        <div className="flex items-center justify-between text-xs text-slate-700 font-bold border-b border-slate-100 pb-2">
-                                          <span className="flex items-center gap-1.5">
-                                            <Layers size={14} className="text-teal-600" />
-                                            খতিয়ান ও দাগ বিবরণী ({toBengaliNumber(t.khatians.length)}  টি খতিয়ান)
-                                          </span>
-                                          <span className="text-[10px] text-slate-400 font-light">শতক এককে হিসাব</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                          {t.khatians.map((k, kIdx) => {
-                                            const activeKLabels: string[] = [];
-                                            if (k.hasCS && k.csKhatian) activeKLabels.push(`সি.এস: ${toBengaliNumber(k.csKhatian)}`);
-                                            if (k.hasSA && k.saKhatian) activeKLabels.push(`এস.এ: ${toBengaliNumber(k.saKhatian)}`);
-                                            if (k.hasRS && k.rsKhatian) activeKLabels.push(`আর.এস: ${toBengaliNumber(k.rsKhatian)}`);
-                                            if (k.hasNamjari && k.namjariKhatian) activeKLabels.push(`নামজারী: ${toBengaliNumber(k.namjariKhatian)}`);
-                                            
-                                            if (activeKLabels.length === 0) {
-                                              if (k.csKhatian) activeKLabels.push(`সি.এস: ${toBengaliNumber(k.csKhatian)}`);
-                                              if (k.saKhatian) activeKLabels.push(`এস.এ: ${toBengaliNumber(k.saKhatian)}`);
-                                              if (k.rsKhatian) activeKLabels.push(`আর.এস: ${toBengaliNumber(k.rsKhatian)}`);
-                                              if (k.namjariKhatian) activeKLabels.push(`নামজারী: ${toBengaliNumber(k.namjariKhatian)}`);
-                                            }
-
-                                            return (
-                                              <div key={k.id || kIdx} className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                                                <div className="font-bold text-slate-800 text-xs flex flex-wrap items-center gap-1.5 border-b border-dashed border-slate-200 pb-1.5">
-                                                  <span className="text-[10px] uppercase font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">খতিয়ান</span>
-                                                  <span>{activeKLabels.join(', ')}</span>
-                                                </div>
-                                                <div className="space-y-1.5 text-[11px]">
-                                                  {k.dags.map((d, dIdx) => {
-                                                    const activeDLabels: string[] = [];
-                                                    if (d.hasCS && d.csDag) activeDLabels.push(`সি.এস দাগ: ${toBengaliNumber(d.csDag)}`);
-                                                    if (d.hasSA && d.saDag) activeDLabels.push(`এস.এ দাগ: ${toBengaliNumber(d.saDag)}`);
-                                                    if (d.hasRS && d.rsDag) activeDLabels.push(`আর.এস দাগ: ${toBengaliNumber(d.rsDag)}`);
-
-                                                    if (activeDLabels.length === 0) {
-                                                      if (d.csDag) activeDLabels.push(`সি.এস দাগ: ${toBengaliNumber(d.csDag)}`);
-                                                      if (d.saDag) activeDLabels.push(`এস.এ দাগ: ${toBengaliNumber(d.saDag)}`);
-                                                      if (d.rsDag) activeDLabels.push(`আর.এস দাগ: ${toBengaliNumber(d.rsDag)}`);
-                                                    }
-
-                                                    return (
-                                                      <div key={d.id || dIdx} className="flex justify-between items-center hover:bg-slate-100/50 p-1 rounded transition-colors">
-                                                        <span className="font-medium text-slate-600">{activeDLabels.join(', ')}</span>
-                                                        <div className="flex items-center gap-4">
-                                                          <div className="flex items-center gap-1 text-slate-500">
-                                                            <span>জমির পরিমাণ:</span>
-                                                            <strong className="text-slate-700 font-mono">{toBengaliNumber(d.amount)} শতক</strong>
-                                                          </div>
-                                                          <button
-                                                            onClick={() => handleShortcutSearch('dag', d.csDag || d.saDag || d.rsDag || '')}
-                                                            className="text-[9px] text-slate-400 hover:text-emerald-700 font-medium border border-slate-200 hover:border-emerald-300 rounded px-1.5 py-0.5 bg-white shadow-xs ml-1"
-                                                          >
-                                                            ইতিহাস
-                                                          </button>
-                                                        </div>
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-
-                                      {/* Right block: Attachments & Notes */}
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold border-b border-slate-100 pb-2">
-                                            <Info size={14} className="text-indigo-600" />
-                                            <span>দলিল ও নথিপত্র স্ক্যান কপি ({(t.attachments && t.attachments.length) ? toBengaliNumber(t.attachments.length) : '০'} টি ফাইল)</span>
-                                          </div>
-                                          {t.attachments && t.attachments.length > 0 ? (
-                                            <div className="grid grid-cols-1 gap-1.5 text-[11px]">
-                                              {t.attachments.map((file) => (
-                                                <div key={file.id} className="flex justify-between items-center bg-slate-100 border border-slate-200 rounded-lg p-2 hover:bg-slate-100 transition-colors">
-                                                  <span className="truncate max-w-[130px] sm:max-w-[160px] font-medium text-slate-700" title={file.name}>
-                                                    {file.name}
-                                                  </span>
-                                                  <div className="flex items-center gap-1.5 text-[10px]">
-                                                    <span className="text-[9px] text-slate-400 font-mono shrink-0">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                                                    <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2 shrink-0">
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => openAttachmentInNewTab(file)}
-                                                        className="text-[10px] text-rose-700 hover:text-rose-950 font-bold hover:underline cursor-pointer flex items-center gap-0.5 select-none"
-                                                      >
-                                                        <Eye size={11} />
-                                                        দেখুন
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          ) : (
-                                            <div className="text-[11px] text-slate-500 italic py-2 text-center border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                                              সংযুক্ত স্ক্যান করা দলিলের ফাইল পাওয়া যায়নি।
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Notes display */}
-                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1.5">
-                                          <div className="text-slate-700 font-bold text-xs flex items-center gap-1">
-                                            <FileText size={13} className="text-slate-500" />
-                                            <span>অতিরিক্ত নোট ও মন্তব্য</span>
-                                          </div>
-                                          <p className="text-[11px] text-slate-600 leading-relaxed font-sans">
-                                            {t.notes ? t.notes : 'এই বিক্রয় দলিলের সাথে বিশেষ কোনো বাড়তি নোট বা মন্তব্য উল্লেখ করা হয়নি।'}
-                                          </p>
-                                        </div>
-                                      </div>
+                                <tr className="bg-ice-tint/40">
+                                  <td colSpan={8} className="p-0">
+                                    <div className="py-3 px-4 pb-4">
+                                      <DeedDetailPanel 
+                                        transaction={t}
+                                        openAttachmentInNewTab={openAttachmentInNewTab}
+                                        handleShortcutSearch={handleShortcutSearch}
+                                      />
                                     </div>
                                   </td>
                                 </tr>
@@ -1994,10 +1912,10 @@ export default function App() {
       {/* Real-time A4 Multi-page/Single-page Voucher Print Layout */}
       {printingDeed && (
         <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs overflow-y-auto p-4 md:p-8 flex items-start justify-center print:p-0 print:bg-white print:backdrop-blur-none">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden flex flex-col my-8 print:my-0 print:border-none print:shadow-none print:max-w-full">
+          <div className="bg-white rounded-[20px] shadow-2xl max-w-4xl w-full border border-border-subtle overflow-hidden flex flex-col my-8 print:my-0 print:border-none print:shadow-none print:max-w-full">
             {/* Control Bar (hidden upon print:hidden) */}
-            <div className="bg-slate-50 border-b border-slate-200 p-4 px-6 flex items-center justify-between print:hidden select-none">
-              <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <div className="bg-ice-tint border-b border-border-subtle p-4 px-6 flex items-center justify-between print:hidden select-none">
+              <h3 className="font-sans font-bold text-text-primary text-sm flex items-center gap-1.5">
                 <FileDown className="text-emerald-700" size={16} />
                 দলিল পিডিএফ ডাউনলোড ও সেভ (A4 পেজ মেমো)
               </h3>
@@ -2007,7 +1925,7 @@ export default function App() {
                     handleSaveAsPDF(printingDeed);
                     setPrintingDeed(null); // Auto-close the modal overlay
                   }}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer"
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 custom-shadow cursor-pointer"
                 >
                   <ExternalLink size={13} />
                   নতুন ট্যাবে পিডিএফ ও প্রিন্ট করুন
@@ -2022,7 +1940,7 @@ export default function App() {
             </div>
 
             {/* Document sheet */}
-            <div id="print-section" className="bg-white p-6 sm:p-12 overflow-x-auto select-text text-slate-800 font-sans mx-auto w-full max-w-[210mm] print:max-w-none print:p-8 print:text-black">
+            <div id="print-section" className="bg-white p-6 sm:p-12 overflow-x-auto select-text text-text-primary font-sans mx-auto w-full max-w-[210mm] print:max-w-none print:p-8 print:text-black">
               {/* Double border representing official land documents */}
               <div className="border border-double border-slate-400 p-6 space-y-6 rounded-lg relative overflow-hidden print:border-slate-500">
                 
@@ -2035,20 +1953,20 @@ export default function App() {
                 {/* Header */}
                 <div className="text-center space-y-2 pb-5 border-b border-slate-300">
                   {currentUser?.userType === 'company' && currentUser?.companyName && (
-                    <div className="text-[28px] font-black text-slate-900 tracking-wide mb-1 leading-tight">{currentUser.companyName}</div>
+                    <div className="text-[28px] font-black text-text-primary tracking-wide mb-1 leading-tight">{currentUser.companyName}</div>
                   )}
-                  <h1 className="text-[22px] font-extrabold text-slate-800 tracking-wider">ভূমি হস্তান্তর বিবরণী</h1>
-                  <p className="text-xs text-slate-500 uppercase tracking-widest font-extrabold">ডিজিটাল খতিয়ান খাতা ও দাগ হিসাব লেজার মেমো</p>
-                  <div className="inline-flex px-3 py-1 rounded-sm bg-slate-100 text-[11px] font-bold text-slate-700 border border-slate-200">
+                  <h1 className="text-[22px] font-extrabold text-text-primary tracking-wider">ভূমি হস্তান্তর বিবরণী</h1>
+                  <p className="text-xs text-text-muted uppercase tracking-widest font-extrabold">ডিজিটাল খতিয়ান খাতা ও দাগ হিসাব লেজার মেমো</p>
+                  <div className="inline-flex px-3 py-1 rounded-sm bg-table-header text-[11px] font-bold text-slate-700 border border-border-subtle">
                     শ্রেণী: {printingDeed.type === 'purchase' ? 'ক্রয়কৃত ভূমির দলিল' : 'বিক্রয়কৃত ভূমির দলিল'}
                   </div>
                 </div>
 
                 {/* Meta details (Single full-length row) */}
                 <div className="text-xs pt-2">
-                  <div className="border border-slate-300 p-3.5 rounded-lg bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="border border-slate-300 p-3.5 rounded-lg bg-ice-tint/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">দলিল নম্বর ও তারিখ</span>
+                      <span className="text-[10px] uppercase font-bold text-text-muted tracking-wider block">দলিল নম্বর ও তারিখ</span>
                       <p className="font-extrabold text-slate-950 text-base mt-1">দলিল নং: {toBengaliNumber(printingDeed.deedNumber)}</p>
                     </div>
                     <div className="sm:text-right space-y-0.5">
@@ -2060,13 +1978,13 @@ export default function App() {
 
                 {/* Buyer & Seller details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="border border-slate-200 p-3.5 rounded-lg space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">ভূমি ক্রেতা (Buyer)</span>
-                    <p className="font-extrabold text-slate-800 text-sm">{printingDeed.buyerName}</p>
+                  <div className="border border-border-subtle p-3.5 rounded-lg space-y-1">
+                    <span className="text-[9px] uppercase font-bold text-text-muted block tracking-wider">ভূমি ক্রেতা (Buyer)</span>
+                    <p className="font-extrabold text-text-primary text-sm">{printingDeed.buyerName}</p>
                   </div>
-                  <div className="border border-slate-200 p-3.5 rounded-lg space-y-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">ভূমি বিক্রেতা (Seller)</span>
-                    <p className="font-extrabold text-slate-800 text-sm">{printingDeed.sellerName}</p>
+                  <div className="border border-border-subtle p-3.5 rounded-lg space-y-1">
+                    <span className="text-[9px] uppercase font-bold text-text-muted block tracking-wider">ভূমি বিক্রেতা (Seller)</span>
+                    <p className="font-extrabold text-text-primary text-sm">{printingDeed.sellerName}</p>
                   </div>
                 </div>
 
@@ -2075,7 +1993,7 @@ export default function App() {
                   <h3 className="text-xs font-bold text-slate-700 border-b pb-1.5 uppercase tracking-wide">খতিয়ান ও সংশ্লিষ্ট দাগ বিবরণী</h3>
                   <table className="w-full text-left border-collapse border border-slate-300 text-xs">
                     <thead>
-                      <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-300 text-[10px] uppercase">
+                      <tr className="bg-ice-tint text-slate-700 font-bold border-b border-slate-300 text-[10px] uppercase">
                         <th className="p-2.5 border-r border-slate-300">খতিয়ান নম্বর সমূহ</th>
                         <th className="p-2.5 border-r border-slate-300">সংশ্লিষ্ট দাগ বিবরণী</th>
                         <th className="p-2.5 border-r border-slate-300">শ্রেণী</th>
@@ -2099,9 +2017,9 @@ export default function App() {
                           const dLabel = dParts.join(', ');
 
                           return (
-                            <tr key={d.id} className="text-[11px] hover:bg-slate-50/50">
+                            <tr key={d.id} className="text-[11px] hover:bg-ice-tint/50">
                               {dIdx === 0 ? (
-                                <td className="p-2.5 font-bold text-slate-800 border-r border-slate-300 align-top leading-relaxed" rowSpan={k.dags.length}>
+                                <td className="p-2.5 font-bold text-text-primary border-r border-slate-300 align-top leading-relaxed" rowSpan={k.dags.length}>
                                   <div className="flex flex-col space-y-1">
                                     {kParts.map((part, pIdx) => (
                                       <div key={pIdx} className="whitespace-nowrap">{toBengaliNumber(part)}</div>
@@ -2118,7 +2036,7 @@ export default function App() {
                               <td className="p-2.5 text-right font-mono text-slate-700 border-r border-slate-300">
                                 {toBengaliNumber(k.hasNamjari ? (d.namjariAmount !== undefined ? d.namjariAmount : 0) : (d.kateAmount !== undefined ? d.kateAmount : 0))} শতক
                               </td>
-                              <td className="p-2.5 text-right font-black text-slate-900 font-mono">
+                              <td className="p-2.5 text-right font-black text-text-primary font-mono">
                                 {toBengaliNumber(d.amount)} শতক
                               </td>
                             </tr>
@@ -2131,11 +2049,11 @@ export default function App() {
                         <td colSpan={3} className="p-2.5"></td>
                         <td colSpan={2} className="p-2.5 text-right">
                           <div className="inline-flex justify-end w-full gap-3">
-                            <div className="border border-slate-300 rounded-lg p-2 bg-slate-50 flex flex-col items-center text-center space-y-0.5">
-                              <span className="text-[8px] uppercase font-extrabold text-slate-600 tracking-wider">
+                            <div className="border border-slate-300 rounded-lg p-2 bg-ice-tint flex flex-col items-center text-center space-y-0.5">
+                              <span className="text-[8px] uppercase font-extrabold text-slate-teal tracking-wider">
                                মোট নামজারী/কাতে জমি:
                               </span>
-                              <span className="font-extrabold text-slate-800 text-xs">
+                              <span className="font-extrabold text-text-primary text-xs">
                                 {toBengaliNumber(printingDeed.khatians.reduce((s, k) => s + k.dags.reduce((ds, d) => ds + (k.hasNamjari ? (Number(d.namjariAmount) || 0) : (Number(d.kateAmount) || 0)), 0), 0))} শতক
                               </span>
                             </div>
@@ -2155,19 +2073,19 @@ export default function App() {
                 </div>
 
                 {/* Signatures region */}
-                <div className="pt-20 flex justify-between items-end gap-6 text-xs text-slate-400 select-none">
+                <div className="pt-20 flex justify-between items-end gap-6 text-xs text-text-muted select-none">
                   <div className="text-center space-y-1 w-36">
-                    <div className="border-t border-dashed border-slate-300 pt-1 text-slate-600 font-bold">গ্রহীতার স্বাক্ষর</div>
-                    <p className="text-[9px] text-slate-400 font-light">তারিখ সহ</p>
+                    <div className="border-t border-dashed border-slate-300 pt-1 text-slate-teal font-bold">গ্রহীতার স্বাক্ষর</div>
+                    <p className="text-[9px] text-text-muted font-light">তারিখ সহ</p>
                   </div>
                   
-                  <div className="text-center text-[9px] text-slate-400 italic">
+                  <div className="text-center text-[9px] text-text-muted italic">
                     হিসাব জেনারেট সম্পন্ন করেছে ডিজিটাল খতিয়ান খাতা
                   </div>
                   
                   <div className="text-center space-y-1 w-36">
-                    <div className="border-t border-dashed border-slate-300 pt-1 text-slate-600 font-bold">পরিচালকের স্বাক্ষর</div>
-                    <p className="text-[9px] text-slate-400 font-light">তারিখ ও সীলমোহর</p>
+                    <div className="border-t border-dashed border-slate-300 pt-1 text-slate-teal font-bold">পরিচালকের স্বাক্ষর</div>
+                    <p className="text-[9px] text-text-muted font-light">তারিখ ও সীলমোহর</p>
                   </div>
                 </div>
 
@@ -2180,17 +2098,17 @@ export default function App() {
       {/* Confirmation Modal to Wipe Database */}
       {showWipeModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-slate-900 font-sans font-bold text-lg">
+          <div className="bg-white rounded-[20px] max-w-md w-full p-6 space-y-4 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-text-primary font-sans font-bold text-lg">
               ডাটাবেজ সম্পূর্ণ ডিলিট করুন?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-text-muted leading-relaxed">
               আপনি কি নিশ্চিত যে আপনি আপনার ব্রাউজারের সকল জমির ক্রয়-বিক্রয় খতিয়ানের বিবরণী ডিলিট করে দিতে চান? এই প্রক্রিয়টি পরবর্তীতে ফিরানো সম্ভব নয়। কাজ সম্পন্ন করার পূর্বে অনুগ্রহ করে ব্যাকআপ ফাইল ডাউনলোড করে রাখুন।
             </p>
             <div className="pt-2 flex justify-end gap-3">
               <button
                 onClick={() => setShowWipeModal(false)}
-                className="text-xs text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
+                className="text-xs text-text-muted hover:text-slate-700 bg-table-header hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
               >
                 বাতিল করুন
               </button>
@@ -2208,17 +2126,17 @@ export default function App() {
       {/* Confirmation Modal to Delete Transaction */}
       {transactionToDelete && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-slate-900 font-sans font-bold text-lg">
+          <div className="bg-white rounded-[20px] max-w-md w-full p-6 space-y-4 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-text-primary font-sans font-bold text-lg">
               লেনদেন ডিলিট করুন?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-text-muted leading-relaxed">
               আপনি কি নিশ্চিত যে এই লেনদেনের দলিলটি ডিলিট করতে চান? এই তথ্যটি আপনার ডাটাবেজ থেকে সম্পূর্ণ মুছে যাবে।
             </p>
             <div className="pt-2 flex justify-end gap-3 font-sans">
               <button
                 onClick={() => setTransactionToDelete(null)}
-                className="text-xs text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
+                className="text-xs text-text-muted hover:text-slate-700 bg-table-header hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
               >
                 বাতিল করুন
               </button>
@@ -2237,7 +2155,7 @@ export default function App() {
                     type: 'success'
                   });
                 }}
-                className="text-xs text-white bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-lg font-bold cursor-pointer"
+                className="text-xs bg-alert-peach text-rose-700 border border-alert-border hover:bg-[#f0c4b8] px-4 py-2 rounded-lg font-bold cursor-pointer"
               >
                 হ্যাঁ, ডিলিট করুন
               </button>
@@ -2249,17 +2167,17 @@ export default function App() {
       {/* Confirmation Modal to Reload Mock Data */}
       {showReloadMockModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-slate-900 font-sans font-bold text-lg">
+          <div className="bg-white rounded-[20px] max-w-md w-full p-6 space-y-4 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-text-primary font-sans font-bold text-lg">
               ডেমো ডাটা রিলোড করুন?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-text-muted leading-relaxed">
               আপনি কি ডেমো ডাটা পুনরায় রিলোড করতে চান? এটি করার ফলে আপনার এন্ট্রি করা সকল ডাটা মুছে যাবে এবং প্রাথমিক ডেমো ডাটা লোড হবে।
             </p>
             <div className="pt-2 flex justify-end gap-3 font-sans">
               <button
                 onClick={() => setShowReloadMockModal(false)}
-                className="text-xs text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
+                className="text-xs text-text-muted hover:text-slate-700 bg-table-header hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
               >
                 বাতিল করুন
               </button>
@@ -2284,17 +2202,17 @@ export default function App() {
       {/* Confirmation Modal to Import Database */}
       {importPendingData && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-slate-900 font-sans font-bold text-lg">
+          <div className="bg-white rounded-[20px] max-w-md w-full p-6 space-y-4 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-text-primary font-sans font-bold text-lg">
               ডাটাবেজ ইম্পোর্ট করুন?
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-text-muted leading-relaxed">
               আপনি কি নিশ্চিত যে আপনার ব্যাকআপ ফাইলটি ইম্পোর্ট করতে চান? এটি আপনার বর্তমান সকল ডাটা রিপ্লেস করে নতুন ফাইলটি সংযুক্ত করবে।
             </p>
             <div className="pt-2 flex justify-end gap-3 font-sans">
               <button
                 onClick={() => setImportPendingData(null)}
-                className="text-xs text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
+                className="text-xs text-text-muted hover:text-slate-700 bg-table-header hover:bg-slate-200 px-4 py-2 rounded-lg font-medium cursor-pointer"
               >
                 বাতিল করুন
               </button>
@@ -2319,11 +2237,11 @@ export default function App() {
       {/* Alert Modal */}
       {alertConfig && (
         <div className="fixed inset-0 z-55 overflow-y-auto bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className={`font-sans font-bold text-lg ${alertConfig.type === 'error' ? 'text-rose-600' : 'text-emerald-800'}`}>
+          <div className="bg-white rounded-[20px] max-w-sm w-full p-6 space-y-4 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <h3 className={`font-sans font-bold text-lg ${alertConfig.type === 'error' ? 'text-rose-700' : 'text-emerald-800'}`}>
               {alertConfig.type === 'error' ? 'তথ্য' : 'সফল'}
             </h3>
-            <p className="text-xs text-slate-600 leading-relaxed font-sans mt-1">
+            <p className="text-xs text-slate-teal leading-relaxed font-sans mt-1">
               {alertConfig.message}
             </p>
             <div className="pt-2 flex justify-end">

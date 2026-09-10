@@ -25,6 +25,7 @@ export interface DagInfo {
 
 export interface KhatianInfo {
   id: string;
+  mouza?: string;
   hasCS: boolean;
   csKhatian?: string;
   hasSA: boolean;
@@ -102,4 +103,9 @@ export interface Customer {
   address?: string;
   totalTransactions: number;
   status: 'Active' | 'Inactive';
+}
+export interface GlobalFilterState {
+  mouza: string | null;
+  khatian: string | null;
+  dag: string | null;
 }

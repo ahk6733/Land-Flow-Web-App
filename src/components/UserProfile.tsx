@@ -430,7 +430,7 @@ export default function UserProfile({
       {message && (
         <div className={`p-4 rounded-xl border flex items-start gap-2.5 max-w-3xl ${
           message.type === 'error' 
-            ? 'bg-rose-50 border-rose-200 text-rose-800' 
+            ? 'bg-alert-peach border-rose-200 text-rose-800' 
             : 'bg-emerald-50 border-emerald-300 text-emerald-800'
         }`}>
           {message.type === 'error' ? <AlertCircle size={18} className="shrink-0 mt-0.5" /> : <CheckCircle size={18} className="shrink-0 mt-0.5" />}
@@ -440,21 +440,21 @@ export default function UserProfile({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Avatar and Quick Stats */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-6 flex flex-col items-center text-center shadow-xs">
+        <div className="bg-white rounded-[20px] border border-border-subtle p-6 space-y-6 flex flex-col items-center text-center custom-shadow">
           <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
             {profileImage ? (
               <img 
                 src={profileImage} 
                 alt={currentUser.name} 
-                className="w-28 h-28 rounded-full object-cover border-4 border-emerald-100 group-hover:opacity-85 transition bg-slate-100"
+                className="w-28 h-28 rounded-full object-cover border-4 border-emerald-100 group-hover:opacity-85 transition bg-table-header"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-28 h-28 rounded-full bg-slate-100 border-4 border-slate-200 flex items-center justify-center text-slate-300 group-hover:opacity-85 transition">
+              <div className="w-28 h-28 rounded-full bg-table-header border-4 border-border-subtle flex items-center justify-center text-slate-300 group-hover:opacity-85 transition">
                 {currentUser.userType === 'company' ? <Building2 size={48} /> : <User size={48} />}
               </div>
             )}
-            <div className="absolute bottom-0 right-0 p-2 bg-emerald-600 rounded-full text-white shadow-md border-2 border-white hover:bg-emerald-700 transition">
+            <div className="absolute bottom-0 right-0 p-2 bg-emerald-600 rounded-full text-white custom-shadow border-2 border-white hover:bg-emerald-700 transition">
               <ImageIcon size={14} />
             </div>
             <input 
@@ -467,21 +467,21 @@ export default function UserProfile({
           </div>
 
           <div className="space-y-1">
-            <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center justify-center gap-2 flex-wrap">
+            <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center justify-center gap-2 flex-wrap">
               {currentUser.userType === 'company' && companyName ? companyName : name}
               {(currentUser.isAdmin || currentUser.userType === 'admin') && (
-                <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-lg text-xs font-sans">
-                  <ShieldCheck size={13} className="shrink-0 text-rose-600 animate-pulse" />
+                <span className="inline-flex items-center gap-1 text-rose-700 font-bold bg-alert-peach px-2 py-0.5 rounded-lg text-xs font-sans">
+                  <ShieldCheck size={13} className="shrink-0 text-rose-700 animate-pulse" />
                   (Admin)
                 </span>
               )}
             </h3>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+            <p className="text-xs font-bold text-text-muted uppercase tracking-wide">
               {(currentUser.isAdmin || currentUser.userType === 'admin') ? 'Administrators' : (currentUser.userType === 'company' ? `কোম্পানি অ্যাডমিনঃ ${name}` : 'ব্যক্তিগত খতিয়ান হোল্ডার')}
             </p>
             <div className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${
               (currentUser.isAdmin || currentUser.userType === 'admin') 
-                ? 'bg-rose-50 text-rose-800' 
+                ? 'bg-alert-peach text-rose-800' 
                 : 'bg-emerald-50 text-emerald-800'
             }`}>
               {currentUser.isAdmin ? 'সিস্টেম এডমিন' : 'সাধারণ ইউজার'}
@@ -490,25 +490,25 @@ export default function UserProfile({
 
           {/* Quick Metrics */}
           {!currentUser.isAdmin && (
-            <div className="w-full border-t border-slate-200 pt-5 grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 col-span-2 flex justify-between items-center">
+            <div className="w-full border-t border-border-subtle pt-5 grid grid-cols-2 gap-3 text-xs">
+              <div className="bg-ice-tint p-3 rounded-xl border border-border-subtle col-span-2 flex justify-between items-center">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">অবশিষ্ট টোকেন (ডাটা এন্ট্রি লিমিট)</span>
-                  <span className={`text-lg font-extrabold select-all ${(currentUser.tokenLimit || 0) - transactions.length <= 0 ? 'text-rose-600' : 'text-indigo-600'}`}>
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block">অবশিষ্ট টোকেন (ডাটা এন্ট্রি লিমিট)</span>
+                  <span className={`text-lg font-extrabold select-all ${(currentUser.tokenLimit || 0) - transactions.length <= 0 ? 'text-rose-700' : 'text-slate-teal'}`}>
                     {Math.max(0, (currentUser.tokenLimit || 0) - transactions.length)} টি বাকি
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">মোট টোকেন</span>
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block">মোট টোকেন</span>
                   <span className="text-lg font-extrabold text-slate-700 select-all">{currentUser.tokenLimit || 0}</span>
                 </div>
               </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">মোট সংরক্ষিত দলিল</span>
-                <span className="text-lg font-extrabold text-slate-800 select-all">{toBengaliNumber(transactions.length)} টি</span>
+              <div className="bg-ice-tint p-3 rounded-xl border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block">মোট সংরক্ষিত দলিল</span>
+                <span className="text-lg font-extrabold text-text-primary select-all">{toBengaliNumber(transactions.length)} টি</span>
               </div>
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">মোট জমি হিসাব</span>
+              <div className="bg-ice-tint p-3 rounded-xl border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block">মোট জমি হিসাব</span>
                 <span className="text-lg font-extrabold text-emerald-800 select-all">
                   {toBengaliNumber(transactions.reduce((acc, t) => acc + (t.type === 'purchase' ? t.transactionAmount : -t.transactionAmount), 0).toFixed(2))} শ.
                 </span>
@@ -518,10 +518,10 @@ export default function UserProfile({
 
           {/* Token Recharge */}
           {!currentUser.isAdmin && (
-            <div className="w-full bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3 mt-4">
-               <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5"><ShieldCheck size={14} className="text-indigo-600"/> টোকেন রিচার্জ করুন</h4>
-               <p className="text-[10px] text-slate-500 leading-relaxed">অ্যাডমিনের কাছ থেকে কেনা .tok ফাইলটি আপলোড করে আপনার ডাটা এন্ট্রি লিমিট বাড়ান।</p>
-               <label className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 transition text-white font-bold text-xs rounded-xl cursor-pointer flex justify-center shadow-md">
+            <div className="w-full bg-ice-tint rounded-xl border border-border-subtle p-4 space-y-3 mt-4">
+               <h4 className="text-xs font-bold text-text-primary flex items-center gap-1.5"><ShieldCheck size={14} className="text-slate-teal"/> টোকেন রিচার্জ করুন</h4>
+               <p className="text-[10px] text-text-muted leading-relaxed">অ্যাডমিনের কাছ থেকে কেনা .tok ফাইলটি আপলোড করে আপনার ডাটা এন্ট্রি লিমিট বাড়ান।</p>
+               <label className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 transition text-white font-bold text-xs rounded-xl cursor-pointer flex justify-center custom-shadow">
                  <input type="file" accept=".tok" className="hidden" onChange={handleTokenUpload} />
                  টোকেন ফাইল সিলেক্ট করুন
                </label>
@@ -530,28 +530,28 @@ export default function UserProfile({
 
           <button
             onClick={onLogout}
-            className="w-full py-2.5 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-900 duration-150 text-xs font-bold rounded-xl cursor-pointer"
+            className="w-full py-2.5 bg-alert-peach text-rose-700 hover:bg-rose-100 hover:text-rose-900 duration-150 text-xs font-bold rounded-xl cursor-pointer"
           >
             অ্যাকাউন্ট লগআউট করুন
           </button>
         </div>
 
         {/* Middle Column: Update Form */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs lg:col-span-2 space-y-6">
-          <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
+        <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow lg:col-span-2 space-y-6">
+          <div className="border-b border-border-subtle pb-3">
+            <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
               <User size={18} className="text-emerald-600" />
               প্রোফাইল ও প্রাতিষ্ঠানিক তথ্য সংশোধন
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">আপনার ব্যক্তিগত বা কোম্পানি সংক্রান্ত যাবতীয় তথ্য আপডেট রাখুন।</p>
+            <p className="text-xs text-text-muted mt-0.5">আপনার ব্যক্তিগত বা কোম্পানি সংক্রান্ত যাবতীয় তথ্য আপডেট রাখুন।</p>
           </div>
 
           <form onSubmit={handleUpdate} className="space-y-4 text-xs font-semibold">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-slate-500">ইউজারের নাম (আবশ্যক)</label>
+                <label className="text-text-muted">ইউজারের নাম (আবশ্যক)</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                     <User size={14} />
                   </span>
                   <input
@@ -559,7 +559,7 @@ export default function UserProfile({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
+                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-border-subtle rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
                   />
                 </div>
               </div>
@@ -583,9 +583,9 @@ export default function UserProfile({
               )}
 
               <div className="space-y-1.5">
-                <label className="text-slate-500">মোবাইল নম্বর (আবশ্যক)</label>
+                <label className="text-text-muted">মোবাইল নম্বর (আবশ্যক)</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                     <Phone size={14} />
                   </span>
                   <input
@@ -593,15 +593,15 @@ export default function UserProfile({
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
+                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-border-subtle rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-500">ইমেইল ঠিকানা (লগইন ইউজারনেম)</label>
+                <label className="text-text-muted">ইমেইল ঠিকানা (লগইন ইউজারনেম)</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                     <Mail size={14} />
                   </span>
                   <input
@@ -609,15 +609,15 @@ export default function UserProfile({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
+                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-border-subtle rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-slate-500">অ্যাকাউন্ট পাসওয়ার্ড</label>
+                <label className="text-text-muted">অ্যাকাউন্ট পাসওয়ার্ড</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                     <Key size={14} />
                   </span>
                   <input
@@ -625,16 +625,16 @@ export default function UserProfile({
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
+                    className="w-full pl-8.5 pr-4 py-2 bg-white border border-border-subtle rounded-lg focus:outline-none focus:border-emerald-600 text-[11px] font-medium"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-border-subtle flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer select-none"
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl custom-shadow transition cursor-pointer select-none"
               >
                 প্রোফাইল সংরক্ষণ পরিবর্তন করুন
               </button>
@@ -643,7 +643,7 @@ export default function UserProfile({
 
           {/* Contact Admin for Tokens Banner (General Users Only) */}
           {(!currentUser?.isAdmin && currentUser?.userType !== 'admin') && (
-            <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5 shadow-sm w-full flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+            <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-5 custom-shadow w-full flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0 shadow-inner">
                   <svg viewBox="0 0 24 24" className="w-6 h-6 text-emerald-600" fill="currentColor">
@@ -651,15 +651,15 @@ export default function UserProfile({
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900 font-sans">নতুন টোকেন প্রয়োজন?</h3>
-                  <p className="text-xs text-slate-600 mt-0.5">টোকেন যুক্ত করার জন্য এডমিন এর সাথে সরাসরি যোগাযোগ করুন।</p>
+                  <h3 className="text-base font-extrabold text-text-primary font-sans">নতুন টোকেন প্রয়োজন?</h3>
+                  <p className="text-xs text-slate-teal mt-0.5">টোকেন যুক্ত করার জন্য এডমিন এর সাথে সরাসরি যোগাযোগ করুন।</p>
                 </div>
               </div>
               <a
                 href="https://wa.me/8801912346733"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap"
+                className="px-6 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white text-xs font-bold rounded-xl custom-shadow transition cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
@@ -675,18 +675,18 @@ export default function UserProfile({
 
 
       {/* Dropdown Options Management */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs w-full space-y-6">
-        <div className="border-b border-slate-200 pb-3">
-          <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
-            <Monitor size={18} className="text-indigo-600" />
+      <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow w-full space-y-6">
+        <div className="border-b border-border-subtle pb-3">
+          <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
+            <Monitor size={18} className="text-slate-teal" />
             ড্রপডাউন অপশন ম্যানেজমেন্ট
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">জমি ক্রয়-বিক্রয় ফর্মে আপনার প্রয়োজনীয় মৌজার নাম ও দলিলের প্রকৃতি যুক্ত করে রাখুন।</p>
+          <p className="text-xs text-text-muted mt-0.5">জমি ক্রয়-বিক্রয় ফর্মে আপনার প্রয়োজনীয় মৌজার নাম ও দলিলের প্রকৃতি যুক্ত করে রাখুন।</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Mouza Management */}
-          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="space-y-3 bg-ice-tint p-4 rounded-xl border border-border-subtle">
             <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> মৌজার নাম যুক্ত করুন</h4>
             <form onSubmit={handleAddMouza} className="flex gap-2">
               <input
@@ -700,19 +700,19 @@ export default function UserProfile({
             </form>
             <div className="flex flex-wrap gap-2 pt-2">
               {(currentUser.customMouzas || []).map((m: string) => (
-                <span key={m} className="px-2 py-1 bg-white border border-slate-200 rounded-md text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-sm">
+                <span key={m} className="px-2 py-1 bg-white border border-border-subtle rounded-md text-xs font-semibold text-slate-700 flex items-center gap-1.5 custom-shadow">
                   {m}
                   <button type="button" onClick={() => handleRemoveMouza(m)} className="text-rose-500 hover:text-rose-700 cursor-pointer"><Trash2 size={12}/></button>
                 </span>
               ))}
               {(!currentUser.customMouzas || currentUser.customMouzas.length === 0) && (
-                <span className="text-xs text-slate-400 italic">কোনো কাস্টম মৌজা নেই।</span>
+                <span className="text-xs text-text-muted italic">কোনো কাস্টম মৌজা নেই।</span>
               )}
             </div>
           </div>
 
           {/* Deed Type Management */}
-          <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div className="space-y-3 bg-ice-tint p-4 rounded-xl border border-border-subtle">
             <h4 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><FileText size={14} className="text-indigo-500"/> দলিলের প্রকৃতি যুক্ত করুন</h4>
             <form onSubmit={handleAddDeedType} className="flex gap-2">
               <input
@@ -726,13 +726,13 @@ export default function UserProfile({
             </form>
             <div className="flex flex-wrap gap-2 pt-2">
               {(currentUser.customDeedTypes || []).map((d: string) => (
-                <span key={d} className="px-2 py-1 bg-white border border-slate-200 rounded-md text-xs font-semibold text-slate-700 flex items-center gap-1.5 shadow-sm">
+                <span key={d} className="px-2 py-1 bg-white border border-border-subtle rounded-md text-xs font-semibold text-slate-700 flex items-center gap-1.5 custom-shadow">
                   {d}
                   <button type="button" onClick={() => handleRemoveDeedType(d)} className="text-rose-500 hover:text-rose-700 cursor-pointer"><Trash2 size={12}/></button>
                 </span>
               ))}
               {(!currentUser.customDeedTypes || currentUser.customDeedTypes.length === 0) && (
-                <span className="text-xs text-slate-400 italic">কোনো কাস্টম দলিলের প্রকৃতি নেই।</span>
+                <span className="text-xs text-text-muted italic">কোনো কাস্টম দলিলের প্রকৃতি নেই।</span>
               )}
             </div>
           </div>
@@ -741,18 +741,18 @@ export default function UserProfile({
 
       {/* Database Backup & Import panel */}
       {!currentUser.isAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs w-full space-y-5">
-          <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+        <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow w-full space-y-5">
+          <div className="border-b border-border-subtle pb-3 flex items-center justify-between">
             <div className="space-y-0.5">
-              <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
-                <ShieldCheck size={18} className="text-teal-600" />
+              <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
+                <ShieldCheck size={18} className="text-slate-teal" />
                 ডাটাবেজ রপ্তানি ও ব্যাকআপ পুনরুদ্ধার (Offline Local JSON Engine)
               </h3>
-              <p className="text-xs text-slate-500">আপনার ডাটা সুরক্ষার জন্য ডাটাবেজ ব্যাকআপ ফাইল ডাউনলোড করে অন্য কোথাও সংরক্ষণ করে রাখুন।</p>
+              <p className="text-xs text-text-muted">আপনার ডাটা সুরক্ষার জন্য ডাটাবেজ ব্যাকআপ ফাইল ডাউনলোড করে অন্য কোথাও সংরক্ষণ করে রাখুন।</p>
             </div>
           </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed font-sans pt-1">
+        <p className="text-xs text-text-muted leading-relaxed font-sans pt-1">
           ভূমি ক্রয়-বিক্রয়ের এই এ্যাপ্লিকেশনটি সম্পূর্ণ সার্ভার-বিহীন অফলাইন টেকনোলজি ব্যবহার করে আপনার ব্রাউজারের লোকাল মেমোরি (LocalStorage) এ ডাটা সংরক্ষণ করছে। ক্যাশ মেমোরি রিফ্রেশ বা ব্রাউজার পরিবর্তনের ফলে ডাটা হারিয়ে ফেলার হাত থেকে বাঁচতে নিয়মিত নিচে উল্লেখিত বাটন ব্যবহারে ব্যাকআপ সংরক্ষণ বা পুনরুদ্ধার করুন।
         </p>
 
@@ -760,7 +760,7 @@ export default function UserProfile({
           {/* Export button */}
           <button
             onClick={handleDatabaseBackupDownload}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-colors cursor-pointer select-none"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-slate-teal hover:bg-[#1D3B47] rounded-xl custom-shadow transition-colors cursor-pointer select-none"
           >
             <HardDriveDownload size={14} />
             সম্পূর্ণ ব্যাকআপ ফাইল ডাউনলোড করুন
@@ -769,7 +769,7 @@ export default function UserProfile({
           {/* Import button */}
           <button
             onClick={handleDatabaseImportClick}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer select-none"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-teal-700 bg-mint-pill hover:bg-teal-100 rounded-xl transition-colors cursor-pointer select-none"
           >
             <HardDriveUpload size={14} />
             ব্যাকআপ ফাইল ইমপোর্ট করুন (JSON/TXT)
@@ -778,19 +778,19 @@ export default function UserProfile({
           {!showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer select-none"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-rose-700 bg-alert-peach hover:bg-rose-100 rounded-xl transition-colors cursor-pointer select-none"
             >
               <Trash2 size={14} />
               সকল ডাটাবেজ মুছে ফেলুন
             </button>
           ) : (
-            <div className="flex flex-col gap-2 bg-rose-50 border border-rose-200 rounded-xl p-3 w-full max-w-sm">
+            <div className="flex flex-col gap-2 bg-alert-peach border border-rose-200 rounded-xl p-3 w-full max-w-sm">
               <span className="text-xs font-bold text-rose-800 animate-pulse flex items-center gap-1.5">
                 <AlertCircle size={14} /> আপনি কি নিশ্চিত? সকল ডাটা মুছে যাবে।
               </span>
               
               {deleteError && (
-                <div className="text-[11px] font-bold text-rose-600 bg-rose-100 rounded-md px-2 py-1 flex items-center gap-1">
+                <div className="text-[11px] font-bold text-rose-700 bg-rose-100 rounded-md px-2 py-1 flex items-center gap-1">
                   <AlertCircle size={12} /> {deleteError}
                 </div>
               )}
@@ -817,7 +817,7 @@ export default function UserProfile({
                       setDeleteError('পাসওয়ার্ড ভুল, সঠিক পাসওয়ার্ড ব্যবহার করুন');
                     }
                   }}
-                  className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                  className="px-3 py-1.5 text-xs font-bold bg-alert-peach text-rose-700 border border-alert-border hover:bg-[#f0c4b8] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                 >
                   নিশ্চিত করুন
                 </button>
@@ -827,7 +827,7 @@ export default function UserProfile({
                     setDeletePassword(''); 
                     setDeleteError(null);
                   }}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                  className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-ice-tint border border-slate-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                 >
                   বাতিল
                 </button>
@@ -848,27 +848,27 @@ export default function UserProfile({
 
       {/* Token Generator Panel (Only shown to System Admin) */}
       {currentUser.isAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs w-full space-y-5 mb-6">
-          <div className="border-b border-slate-200 pb-3">
-            <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
+        <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow w-full space-y-5 mb-6">
+          <div className="border-b border-border-subtle pb-3">
+            <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
               <Key size={18} className="text-emerald-600" />
               সফটওয়্যার টোকেন জেনারেটর (System Admin)
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">ইউজারদের ডাটা এন্ট্রির লিমিট বাড়ানোর জন্য .tok এনক্রিপ্টেড ফাইল তৈরি করুন।</p>
+            <p className="text-xs text-text-muted mt-0.5">ইউজারদের ডাটা এন্ট্রির লিমিট বাড়ানোর জন্য .tok এনক্রিপ্টেড ফাইল তৈরি করুন।</p>
           </div>
           <div className="flex gap-4 items-end">
             <div className="space-y-1.5 flex-1 max-w-xs">
-              <label className="text-xs font-bold text-slate-600">টোকেনের পরিমাণ (১ টোকেন = ১টি দলিল)</label>
+              <label className="text-xs font-bold text-slate-teal">টোকেনের পরিমাণ (১ টোকেন = ১টি দলিল)</label>
               <input
                 type="number"
                 value={generateTokenAmount}
                 onChange={(e) => setGenerateTokenAmount(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 text-sm font-bold"
+                className="w-full px-4 py-2.5 bg-ice-tint border border-border-subtle rounded-xl focus:outline-none focus:border-emerald-600 text-sm font-bold"
               />
             </div>
             <button
               onClick={handleGenerateTokenFile}
-              className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition"
+              className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-full custom-shadow cursor-pointer transition"
             >
               জেনারেট করুন এবং ডাউনলোড করুন
             </button>
@@ -878,19 +878,19 @@ export default function UserProfile({
 
       {/* Multu-user management panel (Only shown to System Admin) */}
       {currentUser.isAdmin && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs w-full space-y-5">
-          <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+        <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow w-full space-y-5">
+          <div className="border-b border-border-subtle pb-3 flex items-center justify-between">
             <div className="space-y-0.5">
-              <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
-                <Briefcase size={18} className="text-indigo-600" />
+              <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
+                <Briefcase size={18} className="text-slate-teal" />
                 মাল্টিপল অপারেটর ইউজার ম্যানেজমেন্ট (System Administrators Block)
               </h3>
-              <p className="text-xs text-slate-500">আপনার এই ডিজিটাল সিস্টেমে যারা ডাটা ইনপুট দিতে পারবে তাদের তালিকা নিয়ন্ত্রণ করুন।</p>
+              <p className="text-xs text-text-muted">আপনার এই ডিজিটাল সিস্টেমে যারা ডাটা ইনপুট দিতে পারবে তাদের তালিকা নিয়ন্ত্রণ করুন।</p>
             </div>
             
             <button
               onClick={() => setShowAddUser(!showAddUser)}
-              className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl flex items-center gap-1 shadow-xs transition cursor-pointer select-none"
+              className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl flex items-center gap-1 custom-shadow transition cursor-pointer select-none"
             >
               <UserPlus size={13} />
               {showAddUser ? 'তালিকা দেখুন' : 'নতুন অপারেটর যোগ করুন'}
@@ -898,15 +898,15 @@ export default function UserProfile({
           </div>
 
           {showAddUser ? (
-            <form onSubmit={handleRegisterNewUser} className="space-y-4 text-xs font-semibold p-4.5 bg-slate-50 border border-slate-200 rounded-xl max-w-xl">
-              <p className="text-slate-800 font-bold text-sm border-b pb-1.5 flex items-center gap-1.5">
-                <UserPlus size={16} className="text-indigo-600" />
+            <form onSubmit={handleRegisterNewUser} className="space-y-4 text-xs font-semibold p-4.5 bg-ice-tint border border-border-subtle rounded-xl max-w-xl">
+              <p className="text-text-primary font-bold text-sm border-b pb-1.5 flex items-center gap-1.5">
+                <UserPlus size={16} className="text-slate-teal" />
                 নতুন অফিস অপারেটর বা কর্মচারীর অ্যাকাউন্ট সংযুক্তি
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-500">ইউজারের শ্রেণীবিভাগ</label>
+                  <label className="text-text-muted">ইউজারের শ্রেণীবিভাগ</label>
                   <select 
                     value={newUserType} 
                     onChange={(e) => setNewUserType(e.target.value as 'personal' | 'company')}
@@ -918,7 +918,7 @@ export default function UserProfile({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-500">অপারেটরের পূর্ণ নাম</label>
+                  <label className="text-text-muted">অপারেটরের পূর্ণ নাম</label>
                   <input
                     type="text"
                     required
@@ -931,20 +931,20 @@ export default function UserProfile({
 
                 {newUserType === 'company' && (
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-indigo-700">কোম্পানি/প্রতিষ্ঠানের নাম</label>
+                    <label className="text-slate-teal">কোম্পানি/প্রতিষ্ঠানের নাম</label>
                     <input
                       type="text"
                       required
                       placeholder="যেমনঃ মেঘনা বিল্ডার্স লিমিটেড"
                       value={newUserCompany}
                       onChange={(e) => setNewUserCompany(e.target.value)}
-                      className="w-full text-xs px-3 py-2 bg-white border border-indigo-200 rounded-lg focus:outline-none focus:border-indigo-600"
+                      className="w-full text-xs px-3 py-2 bg-white border border-border-subtle rounded-lg focus:outline-none focus:border-indigo-600"
                     />
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-slate-500">মোবাইল নম্বর</label>
+                  <label className="text-text-muted">মোবাইল নম্বর</label>
                   <input
                     type="tel"
                     required
@@ -956,7 +956,7 @@ export default function UserProfile({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-500">ইমেইল ঠিকানা</label>
+                  <label className="text-text-muted">ইমেইল ঠিকানা</label>
                   <input
                     type="email"
                     required
@@ -968,7 +968,7 @@ export default function UserProfile({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-500">পাসওয়ার্ড</label>
+                  <label className="text-text-muted">পাসওয়ার্ড</label>
                   <input
                     type="text"
                     required
@@ -984,7 +984,7 @@ export default function UserProfile({
                 <button
                   type="button"
                   onClick={() => setShowAddUser(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg"
+                  className="px-4 py-2 bg-table-header hover:bg-slate-200 text-slate-teal rounded-lg"
                 >
                   বাতিল
                 </button>
@@ -997,10 +997,10 @@ export default function UserProfile({
               </div>
             </form>
           ) : (
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <div className="overflow-x-auto border border-border-subtle rounded-xl">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                  <tr className="bg-ice-tint text-slate-700 font-bold border-b border-border-subtle">
                     <th className="p-3">ইউজারের নাম</th>
                     <th className="p-3">মোবাইল</th>
                     <th className="p-3">ইমেইল / লগইন আইডি</th>
@@ -1009,19 +1009,19 @@ export default function UserProfile({
                     <th className="p-3 text-right">পদক্ষেপ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
+                <tbody className="divide-y divide-slate-200 font-medium text-text-primary">
                   {registeredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={user.id} className="hover:bg-ice-tint/50 transition-colors">
                       <td className="p-3">
-                        <div className="font-extrabold text-slate-900">{user.name}</div>
-                        {user.companyName && <div className="text-[10px] text-slate-400 font-sans">{user.companyName}</div>}
+                        <div className="font-extrabold text-text-primary">{user.name}</div>
+                        {user.companyName && <div className="text-[10px] text-text-muted font-sans">{user.companyName}</div>}
                       </td>
                       <td className="p-3 font-mono">{toBengaliNumber(user.phone)}</td>
                       <td className="p-3 select-all">{user.email}</td>
                       <td className="p-3 text-center text-[10px]">
                         <span className={`px-2 py-0.5 rounded font-bold ${
-                          user.userType === 'company' ? 'bg-indigo-50 text-indigo-700' : 
-                          user.isAdmin || user.userType === 'admin' ? 'bg-rose-50 text-rose-700' :
+                          user.userType === 'company' ? 'bg-ice-tint text-slate-teal' : 
+                          user.isAdmin || user.userType === 'admin' ? 'bg-alert-peach text-rose-700' :
                           'bg-emerald-50 text-emerald-800'
                         }`}>
                           {user.userType === 'company' ? 'কোম্পানি' : (user.isAdmin || user.userType === 'admin') ? 'এডমিন' : 'ব্যক্তিগত'}
@@ -1029,14 +1029,14 @@ export default function UserProfile({
                       </td>
                       <td className="p-3 text-center">
                         {user.isAdmin || user.userType === 'admin' ? (
-                          <span className="text-slate-400 text-[10px] italic">প্রযোজ্য নয়</span>
+                          <span className="text-text-muted text-[10px] italic">প্রযোজ্য নয়</span>
                         ) : (
                           <div className="flex flex-col items-center gap-1.5 py-1">
-                            <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+                            <span className="text-[10px] text-slate-teal font-bold bg-ice-tint px-2 py-0.5 rounded">
                               মোট লিমিট: {user.tokenLimit || 0}
                             </span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                              (user.tokenLimit || 0) - getUserTransactionsCount(user.id) <= 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
+                              (user.tokenLimit || 0) - getUserTransactionsCount(user.id) <= 0 ? 'bg-alert-peach text-rose-700' : 'bg-emerald-50 text-emerald-700'
                             }`}>
                               বাকি: {Math.max(0, (user.tokenLimit || 0) - getUserTransactionsCount(user.id))}
                             </span>
@@ -1065,7 +1065,7 @@ export default function UserProfile({
                                 </button>
                                 <button 
                                   onClick={() => setAddingTokenUserId(null)}
-                                  className="bg-slate-200 hover:bg-slate-300 text-slate-600 p-1 rounded"
+                                  className="bg-slate-200 hover:bg-slate-300 text-slate-teal p-1 rounded"
                                 >
                                   <AlertCircle size={12} />
                                 </button>
@@ -1074,13 +1074,13 @@ export default function UserProfile({
                               <div className="flex items-center gap-1 mt-1">
                                 <button
                                   onClick={() => setAddingTokenUserId(user.id)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors shadow-xs"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors custom-shadow"
                                 >
                                   <Key size={10} /> টোকেন দিন
                                 </button>
                                 <button
                                   onClick={() => setShowTokenHistoryForUserId(user.id)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded transition-colors shadow-xs"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-slate-teal bg-mint-pill hover:bg-indigo-200 rounded transition-colors custom-shadow"
                                 >
                                   হিস্ট্রি
                                 </button>
@@ -1091,7 +1091,7 @@ export default function UserProfile({
                       </td>
                       <td className="p-3 text-right">
                         {user.isAdmin ? (
-                          <span className="text-[10px] text-slate-400 italic">সুপার এডমিন</span>
+                          <span className="text-[10px] text-text-muted italic">সুপার এডমিন</span>
                         ) : (
                           <button
                             onClick={() => {
@@ -1100,7 +1100,7 @@ export default function UserProfile({
                                 setMessage({ text: `অপারেটর "${user.name}" এর অ্যাকাউন্ট সফলভাবে মুছে ফেলা হয়েছে।`, type: 'success' });
                               }
                             }}
-                            className="text-rose-600 hover:text-rose-800 font-bold inline-flex items-center gap-1 cursor-pointer select-none"
+                            className="text-rose-700 hover:text-rose-800 font-bold inline-flex items-center gap-1 cursor-pointer select-none"
                             title="অপারেটর ডিলিট করুন"
                           >
                             <UserMinus size={13} />
@@ -1118,13 +1118,13 @@ export default function UserProfile({
       )}
 
       {/* Database Storage Location Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs w-full space-y-5 mt-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h3 className="text-base font-extrabold text-slate-900 font-sans flex items-center gap-1.5">
-              <Database size={18} className="text-indigo-600" />
+      <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow w-full space-y-5 mt-6">
+          <div className="border-b border-border-subtle pb-3">
+            <h3 className="text-base font-extrabold text-text-primary font-sans flex items-center gap-1.5">
+              <Database size={18} className="text-slate-teal" />
               ডাটাবেজ সংরক্ষন ড্রাইভ (Database Save Location)
             </h3>
-            <p className="text-xs text-slate-500 font-semibold mt-1">
+            <p className="text-xs text-text-muted font-semibold mt-1">
               আপনার লোকাল পিসির কোন ড্রাইভ বা ফোল্ডারে ডাটাবেজ ফাইলটি সেভ হবে তা নির্ধারণ করুন।
             </p>
           </div>
@@ -1137,12 +1137,12 @@ export default function UserProfile({
                 value={customDbPath}
                 onChange={(e) => setCustomDbPath(e.target.value)}
                 placeholder="উদাহরণ: D:\DatabaseFolder"
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                className="flex-1 bg-ice-tint border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
               />
               <button 
                 onClick={handleSaveDbPath}
                 disabled={isSavingDbPath || !customDbPath.trim()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-sm transition-colors cursor-pointer select-none disabled:opacity-50"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs custom-shadow transition-colors cursor-pointer select-none disabled:opacity-50"
               >
                 {isSavingDbPath ? 'সেভ হচ্ছে...' : 'পাথ আপডেট করুন'}
               </button>
@@ -1155,10 +1155,10 @@ export default function UserProfile({
         </div>
       {/* System Admin Hard Reset & Cleanup Section */}
       {currentUser.isAdmin && (
-        <div className="bg-white rounded-2xl border border-rose-200 p-6 shadow-xs w-full space-y-5 mt-6">
-          <div className="border-b border-rose-100 pb-3">
+        <div className="bg-white rounded-[20px] border border-rose-200 p-6 custom-shadow w-full space-y-5 mt-6">
+          <div className="border-b border-border-subtle pb-3">
             <h3 className="text-base font-extrabold text-rose-955 text-rose-900 font-sans flex items-center gap-1.5">
-              <Trash2 size={18} className="text-rose-600" />
+              <Trash2 size={18} className="text-rose-700" />
               সিস্টেম রিসেট ও ডাটা ক্লিনআপ (System Hard Reset & Cleanup)
             </h3>
             <p className="text-xs text-rose-700 font-semibold mt-1">
@@ -1166,7 +1166,7 @@ export default function UserProfile({
             </p>
           </div>
 
-          <div className="p-4.5 bg-rose-50/55 border border-rose-100 rounded-xl space-y-3">
+          <div className="p-4.5 bg-alert-peach/55 border border-border-subtle rounded-xl space-y-3">
             <p className="text-xs font-semibold text-rose-900 leading-relaxed font-sans">
               এই ফিচারের মাধ্যমে আপনি এক ক্লিকে সম্পূর্ণ অ্যাপ্লিকেশনের পুরো মেমোরি খালি করতে পারবেন। এটি সকল অপারেটরের তৈরিকৃত জমির হিসাব/রেকর্ড এবং অপারেটরদের অ্যাকাউন্টসমূহ (এডমিন ব্যতীত) সম্পূর্ণ সাফ বা ক্লিন করে দিবে। এই অ্যাকশনটি অপরিবর্তনযোগ্য।
             </p>
@@ -1180,7 +1180,7 @@ export default function UserProfile({
                   setEntireResetInput('');
                   setEntireResetError(null);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-750 hover:bg-rose-700 active:bg-rose-800 rounded-xl shadow-xs transition-colors cursor-pointer select-none"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold bg-alert-peach text-rose-700 border border-alert-border  hover:bg-[#f0c4b8] active:scale-95 rounded-xl custom-shadow transition-colors cursor-pointer select-none"
               >
                 <Trash2 size={14} />
                 সম্পূর্ণ অ্যাপের ডাটা ডিলিট ও ক্লিন করুন
@@ -1192,7 +1192,7 @@ export default function UserProfile({
                 </span>
                 
                 {entireResetError && (
-                  <div className="text-[11px] font-bold text-rose-700 bg-rose-50 rounded-md px-2 py-1.5 flex items-center gap-1">
+                  <div className="text-[11px] font-bold text-rose-700 bg-alert-peach rounded-md px-2 py-1.5 flex items-center gap-1">
                     <AlertCircle size={12} className="shrink-0" /> {entireResetError}
                   </div>
                 )}
@@ -1206,7 +1206,7 @@ export default function UserProfile({
                       setEntireResetInput(e.target.value);
                       if (entireResetError) setEntireResetError(null);
                     }}
-                    className="flex-1 text-xs px-3 py-1.5 border border-rose-300 rounded-lg focus:outline-none focus:border-rose-500 bg-white placeholder:text-slate-400 font-bold tracking-wider"
+                    className="flex-1 text-xs px-3 py-1.5 border border-rose-300 rounded-lg focus:outline-none focus:border-rose-500 bg-white placeholder:text-text-muted font-bold tracking-wider"
                   />
                   <div className="flex gap-2">
                     <button
@@ -1223,7 +1223,7 @@ export default function UserProfile({
                           setEntireResetError('ধন্যবাদ, অনুগ্রহ করে সঠিক শব্দটি (CLEAN) টাইপ করুন');
                         }
                       }}
-                      className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors cursor-pointer whitespace-nowrap animate-pulse"
+                      className="px-3 py-1.5 text-xs font-bold bg-alert-peach text-rose-700 border border-alert-border hover:bg-[#f0c4b8] rounded-lg transition-colors cursor-pointer whitespace-nowrap animate-pulse"
                     >
                       নিশ্চিত ক্লিন করুন
                     </button>
@@ -1234,7 +1234,7 @@ export default function UserProfile({
                         setEntireResetInput(''); 
                         setEntireResetError(null);
                       }}
-                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-ice-tint border border-slate-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                     >
                       বাতিল
                     </button>
@@ -1249,24 +1249,24 @@ export default function UserProfile({
       {/* Token History Modal */}
       {showTokenHistoryForUserId && tokenHistoryUser && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
-              <h3 className="text-slate-900 font-sans font-extrabold text-lg flex items-center gap-2">
-                <Key className="text-indigo-600" size={20} />
+          <div className="bg-white rounded-[20px] max-w-lg w-full p-6 shadow-xl border border-border-subtle animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center mb-5 border-b border-border-subtle pb-3">
+              <h3 className="text-text-primary font-sans font-extrabold text-lg flex items-center gap-2">
+                <Key className="text-slate-teal" size={20} />
                 টোকেন হিস্ট্রি: {tokenHistoryUser.name}
               </h3>
               <button 
                 onClick={() => setShowTokenHistoryForUserId(null)}
-                className="text-slate-400 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 p-1.5 rounded-full transition-colors cursor-pointer"
+                className="text-text-muted hover:text-rose-700 bg-ice-tint hover:bg-alert-peach p-1.5 rounded-full transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
             
             <div className="grid grid-cols-2 gap-4 mb-5">
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex flex-col items-center justify-center">
+              <div className="bg-ice-tint border border-border-subtle rounded-xl p-3 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider mb-1">মোট টোকেন লিমিট</span>
-                <span className="text-2xl font-black text-indigo-700">{tokenHistoryUser.tokenLimit || 0}</span>
+                <span className="text-2xl font-black text-slate-teal">{tokenHistoryUser.tokenLimit || 0}</span>
               </div>
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">বর্তমানে বাকি আছে</span>
@@ -1281,23 +1281,23 @@ export default function UserProfile({
             <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
               {tokenHistoryUser.tokenHistory && tokenHistoryUser.tokenHistory.length > 0 ? (
                 tokenHistoryUser.tokenHistory.slice().reverse().map((entry: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div key={index} className="flex justify-between items-center p-3 bg-ice-tint border border-border-subtle rounded-xl">
                     <div>
-                      <div className="text-sm font-bold text-slate-800">+{entry.amount} টোকেন যুক্ত হয়েছে</div>
-                      <div className="text-[10px] text-slate-500 font-medium">যুক্ত করেছেন: {entry.addedBy}</div>
+                      <div className="text-sm font-bold text-text-primary">+{entry.amount} টোকেন যুক্ত হয়েছে</div>
+                      <div className="text-[10px] text-text-muted font-medium">যুক্ত করেছেন: {entry.addedBy}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs font-bold text-slate-600">
+                      <div className="text-xs font-bold text-slate-teal">
                         {new Date(entry.date).toLocaleDateString('en-GB')}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-text-muted">
                         {new Date(entry.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-slate-500 text-sm font-medium bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <div className="p-6 text-center text-text-muted text-sm font-medium bg-ice-tint rounded-xl border border-dashed border-border-subtle">
                   কোনো টোকেন হিস্ট্রি পাওয়া যায়নি
                 </div>
               )}

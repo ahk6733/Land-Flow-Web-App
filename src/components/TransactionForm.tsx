@@ -50,10 +50,11 @@ function LandClassSelector({ landClass, onChange }: { landClass: string | undefi
         <input
           type="text"
           autoFocus
+          required
           placeholder="শ্রেণী লিখুন..."
           value={landClass || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full px-1.5 border border-slate-400 text-xs font-bold text-slate-900 h-9 rounded bg-white"
+          className="w-full px-1.5 border border-slate-400 text-xs font-bold text-text-primary h-9 rounded bg-white"
         />
         <button
           type="button"
@@ -61,7 +62,7 @@ function LandClassSelector({ landClass, onChange }: { landClass: string | undefi
             setIsCustom(false);
             onChange('');
           }}
-          className="text-slate-400 hover:text-rose-500 bg-slate-100 p-1 rounded shrink-0 transition"
+          className="text-text-muted hover:text-rose-500 bg-table-header p-1 rounded shrink-0 transition"
           title="বাদ দিন"
         >
           <X size={14} />
@@ -73,6 +74,7 @@ function LandClassSelector({ landClass, onChange }: { landClass: string | undefi
   return (
     <select
       value={landClass || ""}
+      required
       onChange={(e) => {
         if (e.target.value === "__custom__") {
           setIsCustom(true);
@@ -81,7 +83,7 @@ function LandClassSelector({ landClass, onChange }: { landClass: string | undefi
           onChange(e.target.value);
         }
       }}
-      className="w-full px-1.5 border border-slate-400 text-xs font-bold text-slate-900 h-9 rounded bg-white"
+      className="w-full px-1.5 border border-slate-400 text-xs font-bold text-text-primary h-9 rounded bg-white"
     >
       <option value="" disabled>শ্রেণী...</option>
       {PREDEFINED_LAND_CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -147,6 +149,7 @@ export default function TransactionForm({
 
   // Complex nested state
   const [khatians, setKhatians] = useState<KhatianInfo[]>([]);
+  const [completedTafsils, setCompletedTafsils] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   
   // Feedback alerts
@@ -184,7 +187,11 @@ export default function TransactionForm({
       setNamjariLandAmount(editingTransaction.namjariLandAmount);
       setTransactionAmount(editingTransaction.transactionAmount);
       setAttachments(editingTransaction.attachments || []);
-      setKhatians(JSON.parse(JSON.stringify(editingTransaction.khatians))); // deep clone
+      const clonedKhatians = JSON.parse(JSON.stringify(editingTransaction.khatians));
+      clonedKhatians.forEach((kh: any) => {
+        if (!kh.mouza) kh.mouza = editingTransaction.mouza;
+      });
+      setKhatians(clonedKhatians);
 
       if (uniqueMouzas.includes(editingTransaction.mouza)) {
         setMouza(editingTransaction.mouza);
@@ -408,7 +415,8 @@ export default function TransactionForm({
                 totalAmount: d.totalAmount || 0,
                 dagRemaining: totalDagPurchased - totalDagSold,
                 originalKhatian: k,
-                originalDag: d
+                originalDag: d,
+                landClass: d.landClass
               });
             }
           }
@@ -427,7 +435,7 @@ export default function TransactionForm({
     if (!lookupResult || lookupResult.matches.length === 0) return;
 
     // Group matching dags by their respective distinct khatians
-    const khatianGroups: { [key: string]: { khatian: any; dags: any[] } } = {};
+    const khatianGroups: { [key: string]: { mouza: string; khatian: any; dags: any[] } } = {};
 
     lookupResult.matches.forEach((m: any) => {
       const origK = m.originalKhatian;
@@ -442,6 +450,7 @@ export default function TransactionForm({
 
         if (!khatianGroups[key]) {
           khatianGroups[key] = {
+            mouza: m.mouza,
             khatian: origK,
             dags: []
           };
@@ -461,7 +470,9 @@ export default function TransactionForm({
           ].join('|');
           return cdKey === dKey;
         })) {
-          khatianGroups[key].dags.push(origD);
+          // Store dagRemaining from match into the dag object temporarily so we can use it during mapping
+          const dagToPush = { ...origD, _dagRemaining: m.dagRemaining, _landClass: m.landClass };
+          khatianGroups[key].dags.push(dagToPush);
         }
       }
     });
@@ -476,13 +487,15 @@ export default function TransactionForm({
         saDag: origD.saDag || '',
         hasRS: origD.hasRS,
         rsDag: origD.rsDag || '',
+        landClass: origD._landClass,
         totalAmount: origD.totalAmount || 0,
         namjariAmount: origD.namjariAmount || 0,
-        amount: origD.amount || 0
+        amount: type === 'sale' && origD._dagRemaining !== undefined ? origD._dagRemaining : (origD.amount || 0)
       }));
 
       return {
         id: `kh_${Date.now()}_imp_${gIdx}_${Math.random().toString(36).substr(2, 4)}`,
+        mouza: group.mouza,
         hasCS: origK.hasCS,
         csKhatian: origK.csKhatian || '',
         hasSA: origK.hasSA,
@@ -496,8 +509,9 @@ export default function TransactionForm({
     });
 
     if (newImportedKhatians.length > 0) {
-      // Set Mouza from the first matched item
       const matchedMouza = lookupResult.matches[0]?.mouza;
+      const matchedClass = lookupResult.matches[0]?.landClass;
+      
       if (matchedMouza) {
         if (uniqueMouzas.includes(matchedMouza)) {
           setMouza(matchedMouza);
@@ -506,6 +520,15 @@ export default function TransactionForm({
           setMouza('custom');
           setCustomMouza(matchedMouza);
           setShowCustomMouza(true);
+        }
+      }
+      
+      if (matchedClass) {
+        if (PREDEFINED_LAND_CLASSES.includes(matchedClass)) {
+          setLandClass(matchedClass);
+        } else {
+          setLandClass('custom');
+          setCustomLandClass(matchedClass);
         }
       }
 
@@ -554,6 +577,7 @@ export default function TransactionForm({
       saDag: origD.saDag || '',
       hasRS: origD.hasRS,
       rsDag: origD.rsDag || '',
+      landClass: match.landClass,
       totalAmount: origD.totalAmount || 0,
       namjariAmount: origD.namjariAmount || 0,
       amount: origD.amount || 0
@@ -561,6 +585,7 @@ export default function TransactionForm({
 
     const newKhatian: KhatianInfo = {
       id: `kh_${Date.now()}_imp_${Math.random().toString(36).substr(2, 4)}`,
+      mouza: match.mouza,
       hasCS: origK.hasCS,
       csKhatian: origK.csKhatian || '',
       hasSA: origK.hasSA,
@@ -726,7 +751,7 @@ export default function TransactionForm({
     e.preventDefault();
     setErrorText(null);
 
-    const activeMouzaName = showCustomMouza ? customMouza.trim() : mouza;
+    const activeMouzaName = khatians[0]?.mouza?.trim() || '';
     const activeDeedNature = showCustomDeedNature ? customDeedNature.trim() : deedNature;
 
     if (!deedNumber.trim()) {
@@ -776,11 +801,30 @@ export default function TransactionForm({
           hasValidationError = true;
         }
 
+        const currentNamjariOrKate = kh.hasNamjari ? (Number(d.namjariAmount) || 0) : (Number(d.kateAmount) || 0);
+        const currentTotal = Number(d.totalAmount) || 0;
+        const currentAmount = Number(d.amount) || 0;
+
+        if (currentNamjariOrKate > currentTotal) {
+          setErrorText('ত্রুটিঃ দাগের নামজারীকৃত/কাতে পরিমান মোট পরিমান থেকে বেশি হতে পারবে না।');
+          hasValidationError = true;
+        } else if (currentAmount > currentNamjariOrKate) {
+          const actionText = type === 'purchase' ? 'ক্রয়কৃত' : 'বিক্রীত';
+          setErrorText(`ত্রুটিঃ দাগের ${actionText} জমি নামজারীকৃত/কাতে পরিমান থেকে বেশি হতে পারবে না।`);
+          hasValidationError = true;
+        }
+
         if (type === 'sale') {
           let foundPurchase = false;
+          const khatianMouza = kh.mouza?.trim() || activeMouzaName;
+
           for (const tx of transactions) {
-            if (tx.type === 'purchase' && tx.mouza === activeMouzaName && tx.id !== editingTransaction?.id) {
-               const boughtDags = tx.khatians.flatMap(k => k.dags);
+            if (tx.type === 'purchase' && tx.id !== editingTransaction?.id) {
+               const boughtDags = tx.khatians.flatMap(k => {
+                 const txKhatianMouza = k.mouza?.trim() || tx.mouza;
+                 if (txKhatianMouza === khatianMouza) return k.dags;
+                 return [];
+               });
                for (const bd of boughtDags) {
                  if (
                    (d.csDag && bd.csDag && bd.csDag.trim() === d.csDag.trim()) ||
@@ -797,7 +841,7 @@ export default function TransactionForm({
 
           const hasDagName = d.csDag?.trim() || d.saDag?.trim() || d.rsDag?.trim();
           if (!foundPurchase && hasDagName) {
-            setErrorText('ত্রুটিঃ জমি ক্রয় নাই। আপনি এমন দাগ বিক্রয় করতে পারবেন না যা পূর্বে ক্রয় করা হয়নি।');
+            setErrorText(`ত্রুটিঃ জমি ক্রয় নাই। আপনি এমন দাগ বিক্রয় করতে পারবেন না যা পূর্বে ক্রয় করা হয়নি (মৌজা: ${khatianMouza})।`);
             hasValidationError = true;
           }
         }
@@ -841,13 +885,13 @@ export default function TransactionForm({
 
   if (remainingTokens <= 0 && !editingTransaction && !currentUser?.isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-sm border border-rose-100 text-center animate-in fade-in zoom-in duration-300 my-4">
+      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[20px] custom-shadow border border-border-subtle text-center animate-in fade-in zoom-in duration-300 my-4">
          <AlertTriangle size={64} className="text-rose-500 mb-4 animate-bounce" />
-         <h2 className="text-2xl font-black text-slate-800 mb-2">টোকেন লিমিট শেষ!</h2>
-         <p className="text-slate-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+         <h2 className="text-2xl font-black text-text-primary mb-2">টোকেন লিমিট শেষ!</h2>
+         <p className="text-text-muted text-sm max-w-md mx-auto mb-6 leading-relaxed">
            আপনার অ্যাকাউন্টে ডাটা এন্ট্রির জন্য কোনো টোকেন অবশিষ্ট নেই। নতুন দলিল এন্ট্রি করতে দয়া করে এডমিন এর সাথে যোগাযোগ করুন এবং .tok ফাইল সংগ্রহ করে আপনার প্রোফাইল থেকে রিচার্জ করুন।
          </p>
-         <button onClick={onCancelEdit} className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer">
+         <button onClick={onCancelEdit} className="px-6 py-2.5 bg-table-header hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer">
            ফিরে যান
          </button>
       </div>
@@ -855,24 +899,17 @@ export default function TransactionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 text-sm font-semibold text-slate-900 font-sans">
-      {/* feedback message warning */}
-      {errorText && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-start gap-2 max-w-3xl animate-shake">
-          <AlertTriangle size={18} className="shrink-0 mt-0.5 text-rose-600" />
-          <p className="font-bold leading-relaxed">{errorText}</p>
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-6 text-sm font-semibold text-text-primary font-sans">
 
       {/* MODAL HEADER with SEARCH BAR and CLOSE BUTTON */}
-      <div className={`flex items-center justify-between border-b border-slate-300 pb-4 sticky -top-6 z-20 -mx-6 px-6 pt-6 shadow-sm ${type === 'purchase' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+      <div className={`flex items-center justify-between border-b border-slate-300 pb-4 sticky -top-6 z-20 -mx-6 px-6 pt-6 custom-shadow ${type === 'purchase' ? 'bg-emerald-50' : 'bg-alert-peach'}`}>
         {/* Left Side: Title */}
         <div>
-          <h2 className="text-lg font-bold text-slate-900 font-sans flex items-center gap-2">
+          <h2 className="text-lg font-bold text-text-primary font-sans flex items-center gap-2">
             {type === 'purchase' ? (
-              <PlusCircle size={18} className="text-teal-600 animate-pulse" />
+              <PlusCircle size={18} className="text-slate-teal animate-pulse" />
             ) : (
-              <MinusCircle size={18} className="text-rose-600 animate-pulse" />
+              <MinusCircle size={18} className="text-rose-700 animate-pulse" />
             )}
             {editingTransaction 
               ? (type === 'purchase' ? 'ভূমি ক্রয় হিসাব সম্পাদনা (ইডিট)' : 'ভূমি বিক্রয় হিসাব সম্পাদনা (ইডিট)')
@@ -888,7 +925,7 @@ export default function TransactionForm({
                 </>
               ))}
           </h2>
-          <p className="text-xs text-slate-500 mt-1 hidden md:block">
+          <p className="text-xs text-text-muted mt-1 hidden md:block">
             {type === 'purchase' 
               ? 'সঠিক দলিল ও খতিয়ান তথ্য দিয়ে নিচের ফর্মটি পূরণ করুন।' 
               : 'সব রেকর্ড যাচাই করে নিচের বিক্রয় ফর্মটি পূরণ করুন।'}
@@ -902,7 +939,7 @@ export default function TransactionForm({
           <button
             type="button"
             onClick={onCancelEdit}
-            className="px-3.5 py-1.5 text-xs text-rose-50 hover:text-white bg-rose-500 hover:bg-rose-600 rounded-lg font-bold transition cursor-pointer select-none flex items-center gap-1 shadow-sm h-8"
+            className="px-3.5 py-1.5 text-xs text-rose-50 bg-alert-peach hover:bg-alert-peach text-rose-700 border border-alert-border rounded-lg font-bold transition cursor-pointer select-none flex items-center gap-1 custom-shadow h-8"
           >
             <X size={15} /> বন্ধ করুন
           </button>
@@ -912,9 +949,9 @@ export default function TransactionForm({
       {/* Lookup search result display container */}
       {lookupResult && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className={`rounded-2xl border border-slate-200 shadow-2xl p-6 w-full max-w-5xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col ${type === 'purchase' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200 shrink-0 mb-4">
-              <h5 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <div className={`rounded-[20px] border border-border-subtle shadow-2xl p-6 w-full max-w-5xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col ${type === 'purchase' ? 'bg-emerald-50' : 'bg-alert-peach'}`}>
+            <div className="flex items-center justify-between border-b pb-3 border-border-subtle shrink-0 mb-4">
+              <h5 className="text-sm font-black text-text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <CheckCircle2 size={18} className="text-emerald-600" />
                 "{lookupResult.query}" এর জন্য পূর্বের রেকর্ড
               </h5>
@@ -924,7 +961,7 @@ export default function TransactionForm({
                   setLookupResult(null);
                   setImportedMatchIndices([]);
                 }}
-                className="text-slate-500 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                className="text-text-muted hover:text-rose-700 p-1.5 rounded-lg hover:bg-alert-peach transition-colors"
               >
                 <X size={20} />
               </button>
@@ -932,27 +969,27 @@ export default function TransactionForm({
 
             <div className="flex-1 overflow-y-auto min-h-0 pr-1">
               {lookupResult.matches.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-base font-medium">
+                <div className="text-center py-10 text-text-muted text-base font-medium">
                   কোনো রেকর্ড পাওয়া যায়নি।
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                  <div className="overflow-x-auto rounded-xl border border-border-subtle custom-shadow bg-white">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                      <thead className="bg-slate-100 text-slate-700 font-extrabold border-b border-slate-200">
+                      <thead className="bg-table-header text-slate-700 font-extrabold border-b border-border-subtle">
                         <tr>
-                          <th className="p-3 border-r border-slate-200 text-center">মৌজার নাম</th>
-                          <th className="p-3 border-r border-slate-200 text-center">খতিয়ান নম্বর</th>
-                          <th className="p-3 border-r border-slate-200 text-center">সংশ্লিষ্ট দাগ</th>
-                          <th className="p-3 border-r border-slate-200 text-center">দাগের মোট জমি</th>
-                          <th className="p-3 border-r border-slate-200 text-center">নামজারী/কাতে</th>
-                          <th className="p-3 text-center border-r border-slate-200 text-emerald-950 bg-emerald-50/50 font-extrabold">
+                          <th className="p-3 border-r border-border-subtle text-center">মৌজার নাম</th>
+                          <th className="p-3 border-r border-border-subtle text-center">খতিয়ান নম্বর</th>
+                          <th className="p-3 border-r border-border-subtle text-center">সংশ্লিষ্ট দাগ</th>
+                          <th className="p-3 border-r border-border-subtle text-center">দাগের মোট জমি</th>
+                          <th className="p-3 border-r border-border-subtle text-center">নামজারী/কাতে</th>
+                          <th className="p-3 text-center border-r border-border-subtle text-emerald-950 bg-emerald-50/50 font-extrabold">
                             {type === 'purchase' ? 'ক্রয়কৃত জমি' : 'বিক্রীত জমি'}
                           </th>
-                          <th className="p-3 border-r border-slate-200 text-center font-extrabold text-blue-900 bg-blue-50/50">
+                          <th className="p-3 border-r border-border-subtle text-center font-extrabold text-blue-900 bg-blue-50/50">
                             অবশিষ্ট জমি
                           </th>
-                          <th className="p-3 text-center font-extrabold text-slate-700 bg-slate-50 border-slate-200">
+                          <th className="p-3 text-center font-extrabold text-slate-700 bg-ice-tint border-border-subtle">
                             অ্যাকশন
                           </th>
                         </tr>
@@ -961,26 +998,26 @@ export default function TransactionForm({
                         {lookupResult.matches.map((m, idx) => {
                           const isImported = importedMatchIndices.includes(idx);
                           return (
-                            <tr key={idx} className="hover:bg-slate-50 text-slate-800">
-                              <td className="p-3 border-r border-slate-200 whitespace-nowrap align-middle text-center">
+                            <tr key={idx} className="hover:bg-ice-tint text-text-primary">
+                              <td className="p-3 border-r border-border-subtle whitespace-nowrap align-middle text-center">
                                 {m.mouza.replace(/\s*মৌজা\s*$/, '')}
                               </td>
-                              <td className="p-3 border-r border-slate-200 font-bold whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle font-bold whitespace-nowrap">
                                 {toBengaliNumber(m.khatianNo)}
                               </td>
-                              <td className="p-3 border-r border-slate-200 font-bold text-slate-900 whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle font-bold text-text-primary whitespace-nowrap">
                                 {toBengaliNumber(m.dagNo)}
                               </td>
-                              <td className="p-3 border-r border-slate-200 text-right font-mono font-medium whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle text-right font-mono font-medium whitespace-nowrap">
                                 {toBengaliNumber(m.totalAmount)} শতক
                               </td>
-                              <td className="p-3 border-r border-slate-200 text-right font-mono font-medium whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle text-right font-mono font-medium whitespace-nowrap">
                                 {toBengaliNumber(m.namjariAmount || m.kateAmount || 0)} শতক
                               </td>
-                              <td className="p-3 border-r border-slate-200 text-right font-mono text-emerald-900 bg-emerald-50/30 font-bold whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle text-right font-mono text-emerald-900 bg-emerald-50/30 font-bold whitespace-nowrap">
                                 {toBengaliNumber(m.amount)} শতক
                               </td>
-                              <td className="p-3 border-r border-slate-200 text-right font-mono text-blue-900 bg-blue-50/30 font-bold whitespace-nowrap">
+                              <td className="p-3 border-r border-border-subtle text-right font-mono text-blue-900 bg-blue-50/30 font-bold whitespace-nowrap">
                                 {toBengaliNumber(m.dagRemaining)} শতক
                               </td>
                               <td className="p-2 text-center align-middle whitespace-nowrap">
@@ -988,7 +1025,7 @@ export default function TransactionForm({
                                   <button
                                     type="button"
                                     disabled
-                                    className="bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 cursor-default mx-auto shadow-xs select-none"
+                                    className="bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 cursor-default mx-auto custom-shadow select-none"
                                     title="যুক্ত করা হয়েছে"
                                   >
                                     <Check size={14} className="stroke-[2.5]" />
@@ -998,7 +1035,7 @@ export default function TransactionForm({
                                   <button
                                     type="button"
                                     onClick={() => handleImportSingleMatch(m, idx)}
-                                    className="bg-emerald-100 hover:bg-emerald-600 text-emerald-800 hover:text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition mx-auto shadow-sm active:scale-95 select-none"
+                                    className="bg-emerald-100 hover:bg-emerald-600 text-emerald-800 hover:text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition mx-auto custom-shadow active:scale-95 select-none"
                                   >
                                     <Plus size={14} />
                                     যুক্ত করুন
@@ -1016,7 +1053,7 @@ export default function TransactionForm({
                     <button
                       type="button"
                       onClick={handleImportMatches}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 hover:shadow-md cursor-pointer select-none transition-all duration-150 active:scale-95"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 hover:custom-shadow cursor-pointer select-none transition-all duration-150 active:scale-95"
                     >
                       <PlusCircle size={18} className="text-white shrink-0" />
                       <span>সকল তথ্য যুক্ত করুন</span>
@@ -1030,14 +1067,14 @@ export default function TransactionForm({
       )}
 
       {/* SECTION 1: General Info */}
-      <div className="bg-slate-50/50 p-4 md:p-6 rounded-2xl border border-slate-100">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
+      <div className="bg-ice-tint/50 p-4 md:p-6 rounded-[20px] border border-border-subtle">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
           
           {/* Row 1 */}
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">রেজিস্ট্রেশন বা দলিলের তারিখ</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                 <Calendar size={14} />
               </span>
               <input
@@ -1045,9 +1082,20 @@ export default function TransactionForm({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm"
+                className="w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-text-primary custom-shadow"
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-slate-700 font-bold text-xs md:text-sm">দলিল নম্বর (আবশ্যক)</label>
+            <input
+              type="number"
+              required
+              value={deedNumber}
+              onChange={(e) => setDeedNumber(e.target.value)}
+              className="w-full text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-text-primary custom-shadow"
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -1056,7 +1104,7 @@ export default function TransactionForm({
               <select
                 value={deedNature}
                 onChange={(e) => handleDeedNatureChange(e.target.value)}
-                className={`${showCustomDeedNature ? 'w-1/2' : 'w-full'} text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm`}
+                className={`${showCustomDeedNature ? 'w-1/2' : 'w-full'} text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-text-primary custom-shadow`}
               >
                 {uniqueDeedNatures.map((n) => (
                   <option key={n} value={n}>{n}</option>
@@ -1069,28 +1117,16 @@ export default function TransactionForm({
                   placeholder="লিখুন..."
                   value={customDeedNature}
                   onChange={(e) => setCustomDeedNature(e.target.value)}
-                  className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
+                  className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-text-primary placeholder:text-text-muted custom-shadow"
                 />
               )}
             </div>
           </div>
 
-          {/* Row 2 */}
-          <div className="space-y-1.5">
-            <label className="text-slate-700 font-bold text-xs md:text-sm">দলিল নম্বর (আবশ্যক)</label>
-            <input
-              type="text"
-              required
-              value={deedNumber}
-              onChange={(e) => setDeedNumber(e.target.value)}
-              className="w-full text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm"
-            />
-          </div>
-
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">ভূমি গ্রহীতা / ক্রেতা নাম (Buyer)</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                 <User size={14} />
               </span>
               <input
@@ -1099,7 +1135,7 @@ export default function TransactionForm({
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
                 readOnly={type === 'purchase' && currentUser?.userType === 'company'}
-                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm ${type === 'purchase' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
+                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-text-primary custom-shadow ${type === 'purchase' && currentUser?.userType === 'company' ? 'opacity-80 bg-ice-tint cursor-not-allowed' : ''}`}
               />
             </div>
           </div>
@@ -1108,7 +1144,7 @@ export default function TransactionForm({
           <div className="space-y-1.5">
             <label className="text-slate-700 font-bold text-xs md:text-sm">ভূমি দাতা / বিক্রেতা নাম (Seller)</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
                 <User size={14} />
               </span>
               <input
@@ -1117,36 +1153,38 @@ export default function TransactionForm({
                 value={sellerName}
                 onChange={(e) => setSellerName(e.target.value)}
                 readOnly={type === 'sale' && currentUser?.userType === 'company'}
-                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm ${type === 'sale' && currentUser?.userType === 'company' ? 'opacity-80 bg-slate-50 cursor-not-allowed' : ''}`}
+                className={`w-full text-sm font-semibold pl-9 pr-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-text-primary custom-shadow ${type === 'sale' && currentUser?.userType === 'company' ? 'opacity-80 bg-ice-tint cursor-not-allowed' : ''}`}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-700 font-bold text-xs md:text-sm flex items-center gap-1.5"><MapPin size={15} className="text-emerald-600"/> মৌজার নাম নির্বাচন করুন</label>
-            <div className="flex gap-1 pt-0.5">
-              <select
-                value={mouza}
-                onChange={(e) => handleMouzaChange(e.target.value)}
-                className={`${showCustomMouza ? 'w-1/2' : 'w-full'} text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 h-10 text-slate-900 shadow-sm`}
+            <label className="text-slate-700 font-bold text-xs md:text-sm text-transparent select-none hidden md:block">খুজুন</label>
+            <div className="flex gap-1.5 items-center bg-white border border-emerald-200 p-1 rounded-lg custom-shadow w-full h-10">
+              <Search size={16} className="text-emerald-600 ml-2 shrink-0" />
+              <input
+                type="text"
+                placeholder="দাগ বা খতিয়ান নম্বর দিয়ে যাচাই করুন..."
+                value={lookupQuery}
+                onChange={(e) => {
+                  setLookupQuery(e.target.value);
+                  if (!e.target.value) setLookupResult(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLookup();
+                  }
+                }}
+                className="flex-grow text-xs font-semibold px-2 bg-transparent focus:outline-none font-sans h-full text-slate-950 placeholder:text-text-muted w-full min-w-0"
+              />
+              <button
+                type="button"
+                onClick={handleLookup}
+                className="shrink-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] px-3 rounded-lg flex items-center justify-center gap-1 hover:custom-shadow cursor-pointer select-none transition-all duration-150 active:scale-95 whitespace-nowrap h-8"
               >
-                {uniqueMouzas.map((m) => (
-                  <option key={m} value={m}>
-                    {m.replace(/\s*মৌজা\s*$/, '')}
-                  </option>
-                ))}
-                <option value="custom">নতুন মৌজার নাম লিখুন...</option>
-              </select>
-
-              {showCustomMouza && (
-                <input
-                  type="text"
-                  placeholder="নতুন মৌজার নাম..."
-                  value={customMouza}
-                  onChange={(e) => setCustomMouza(e.target.value)}
-                  className="w-1/2 text-sm font-semibold px-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600 font-sans h-10 text-slate-900 placeholder:text-slate-400 shadow-sm"
-                />
-              )}
+                জমি খুজুন
+              </button>
             </div>
           </div>
           
@@ -1154,90 +1192,164 @@ export default function TransactionForm({
       </div>
 
       {/* SECTION 3: Mouza and Khatian details */}
-      <div className="mt-10 border-t-2 border-dashed border-slate-200 pt-8 space-y-8">
+      <div className="mt-4 space-y-6">
         
         {/* Structured Khatians and Dags */}
         <div className="space-y-4 pt-2">
-          <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 md:pb-2 border-slate-200 gap-4">
-            <span className="text-sm font-extrabold text-slate-800 flex justify-center md:justify-start items-center gap-1.5 text-center md:text-left">
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 md:pb-2 border-border-subtle gap-4">
+            <span className="text-sm font-extrabold text-text-primary flex justify-center md:justify-start items-center gap-1.5 text-center md:text-left">
               <PlusCircle size={18} className="text-emerald-700 hidden md:block" />
-              দলিল সংশ্লিষ্ট খতিয়ান ও সংশ্লিষ্ট দাগ বিবরণ
+              জমির তফসিল বিবরণী
             </span>
           
             <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
-              {/* Search Bar */}
-              <div className="flex gap-1.5 items-center bg-white border border-emerald-200 p-1 rounded-xl shadow-sm w-full md:max-w-sm">
-                <Search size={16} className="text-emerald-600 ml-2 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="দাগ বা খতিয়ান নম্বর দিয়ে যাচাই করুন..."
-                  value={lookupQuery}
-                  onChange={(e) => {
-                    setLookupQuery(e.target.value);
-                    if (!e.target.value) setLookupResult(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleLookup();
-                    }
-                  }}
-                  className="flex-grow text-xs font-semibold px-2 bg-transparent focus:outline-none font-sans h-8 text-slate-950 placeholder:text-slate-400 w-full md:w-48"
-                />
-                <button
-                  type="button"
-                  onClick={handleLookup}
-                  className="shrink-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-[11px] px-3 rounded-lg flex items-center justify-center gap-1 hover:shadow-xs cursor-pointer select-none transition-all duration-150 active:scale-95 whitespace-nowrap h-8"
-                >
-                  জমি খুজুন
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleAddKhatian}
-                className={`${khatians.length > 0 ? 'hidden md:flex' : 'flex'} shrink-0 px-4 py-2 ${khatianFeedback ? 'bg-emerald-800 scale-95 ring-2 ring-emerald-300' : 'bg-emerald-600 hover:bg-emerald-800'} text-white font-bold text-xs rounded-xl items-center justify-center gap-1 cursor-pointer transition-all duration-200 shadow-xs select-none h-10 w-full md:w-auto`}
-              >
-                {khatianFeedback ? <Check size={12} /> : <Plus size={12} />}
-                {khatianFeedback ? 'খতিয়ান যুক্ত হয়েছে!' : 'নতুন খতিয়ান যোগ করুন'}
-              </button>
             </div>
           </div>
 
-        <div className="space-y-5">
-          {khatians.map((kh, khIdx) => (
-            <div key={kh.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 md:p-5 space-y-4 relative">
+        {khatians.length === 0 ? (
+          <div className="flex justify-center items-center py-12 bg-emerald-50/50 border-2 border-dashed border-emerald-200 rounded-[20px]">
+            <button
+              type="button"
+              onClick={handleAddKhatian}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 custom-shadow select-none"
+            >
+              <Plus size={18} />
+              জমির তফসিল যুক্ত করুন
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {khatians.map((kh, khIdx) => {
+              const isCompleted = completedTafsils.includes(kh.id);
+
+              if (isCompleted) {
+                const totalAmount = kh.dags.reduce((sum, d) => sum + (d.amount || 0), 0);
+                return (
+                  <div key={kh.id} className="bg-white border border-border-subtle rounded-xl p-4 custom-shadow flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-emerald-100 text-emerald-800 p-2 rounded-lg shrink-0 mt-1">
+                        <MapPin size={18} />
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-text-primary flex items-center gap-2 mb-1.5">
+                          <span>তফসিল #{khIdx + 1}</span>
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                            সম্পন্ন
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-teal font-medium leading-relaxed break-words max-w-[100%] overflow-hidden">
+                          <span className="font-bold text-text-primary">মৌজা:</span> {kh.mouza || 'নির্ধারিত নয়'} 
+                          <span className="mx-1.5 text-slate-300">|</span>
+                          <span className="font-bold text-text-primary">খতিয়ান:</span> {
+                            [
+                              kh.csKhatian ? `সি.এস: ${kh.csKhatian}` : '',
+                              kh.saKhatian ? `এস.এ: ${kh.saKhatian}` : '',
+                              kh.rsKhatian ? `আর.এস: ${kh.rsKhatian}` : '',
+                              kh.namjariKhatian ? `নামজারী: ${kh.namjariKhatian}` : ''
+                            ].filter(Boolean).join(', ') || 'নেই'
+                          } 
+                          <span className="mx-1.5 text-slate-300">|</span>
+                          <span className="font-bold text-text-primary">দাগ ও পরিমাণ:</span> {
+                            kh.dags.map(d => {
+                              const dLabel = [
+                                d.csDag ? `সি.এস: ${d.csDag}` : '',
+                                d.saDag ? `এস.এ: ${d.saDag}` : '',
+                                d.rsDag ? `আর.এস: ${d.rsDag}` : ''
+                              ].filter(Boolean).join(', ') || 'নেই';
+                              return `(${dLabel} - ${d.amount || 0} শতক)`;
+                            }).join(', ')
+                          } 
+                          <span className="mx-1.5 text-slate-300">|</span>
+                          <span className="font-bold text-text-primary">মোট জমি:</span> <span className="text-emerald-700 font-extrabold">{totalAmount.toFixed(2)} শতক</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCompletedTafsils(prev => prev.filter(id => id !== kh.id))}
+                        className="text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        এডিট করুন
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveKhatian(kh.id)}
+                        className="text-rose-500 hover:bg-alert-peach p-1.5 rounded-lg border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                        title="তফসিলটি মুছে দিন"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={kh.id} className="bg-ice-tint border border-border-subtle rounded-[20px] p-4 md:p-5 space-y-4 relative custom-shadow">
               <button
                 type="button"
                 onClick={() => handleRemoveKhatian(kh.id)}
-                className="absolute top-3 right-3 md:top-4 md:right-4 text-rose-500 hover:text-rose-700 hover:bg-white p-1.5 md:p-2 rounded-lg border border-transparent hover:border-slate-200 shadow-xs cursor-pointer select-none z-10"
+                className="absolute top-3 right-3 md:top-4 md:right-4 text-rose-500 hover:text-rose-700 hover:bg-white p-1.5 md:p-2 rounded-lg border border-transparent hover:border-border-subtle custom-shadow cursor-pointer select-none z-10"
                 title="খতিয়ানটি মুছে দিন"
               >
                 <Trash2 size={14} />
               </button>
 
-              <div className="font-extrabold text-slate-800 text-xs border-b border-dashed pb-2 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 bg-slate-200/40 px-2 py-1 pr-10 md:pr-2 rounded">
+              <div className="font-extrabold text-text-primary text-xs border-b border-dashed pb-2 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 bg-slate-200/40 px-2 py-1 pr-10 md:pr-2 rounded">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="bg-emerald-700 text-white rounded px-2 py-0.5 text-sm md:text-[15px] uppercase font-mono">খতিয়ান #{khIdx + 1}</span>
+                  <span className="bg-emerald-700 text-white rounded px-2 py-0.5 text-sm md:text-[15px] uppercase font-mono">তফসিল #{khIdx + 1}</span>
                   <span className="hidden sm:inline">খতিয়ান নম্বর সংযুক্তি বিবরণী</span>
                   <span className="sm:hidden text-[10px]">সংযুক্তি বিবরণী</span>
                 </div>
                 
-                {khIdx === 0 && (
-                  <button
-                    type="button"
-                    onClick={handleAddKhatian}
-                    className={`md:hidden shrink-0 px-2.5 py-1 ${khatianFeedback ? 'bg-emerald-800 scale-95 ring-2 ring-emerald-300' : 'bg-emerald-600 hover:bg-emerald-800'} text-white font-bold text-[10px] rounded flex items-center justify-center gap-1 cursor-pointer transition-all duration-200 shadow-xs select-none`}
-                  >
-                    {khatianFeedback ? <Check size={10} /> : <Plus size={10} />}
-                    {khatianFeedback ? 'যুক্ত হয়েছে!' : 'নতুন খতিয়ান'}
-                  </button>
-                )}
+
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex flex-col gap-2 mt-2 px-1 pb-2">
+                 <div className="w-full md:w-3/4">
+                   <label className="text-sm font-black text-slate-800 block mb-1.5 flex items-center gap-1.5">
+                     <MapPin size={15} className="text-emerald-600"/> মৌজার নাম নির্বাচন করুন (আবশ্যক)
+                   </label>
+                   <div className="flex gap-1.5 pt-0.5">
+                     <select
+                       value={uniqueMouzas.includes(kh.mouza || '') ? kh.mouza : (kh.mouza ? 'custom' : '')}
+                       onChange={(e) => {
+                         if (e.target.value !== 'custom') {
+                           handleUpdateKhatian(kh.id, { mouza: e.target.value });
+                         } else {
+                           handleUpdateKhatian(kh.id, { mouza: ' ' }); // trigger custom input
+                         }
+                       }}
+                       className="w-1/2 text-[13px] font-bold px-3 bg-white border border-slate-300 rounded-md focus:outline-none focus:border-emerald-600 h-9 text-text-primary custom-shadow"
+                     >
+                       <option value="">নির্বাচন করুন...</option>
+                       {uniqueMouzas.map((m) => (
+                         <option key={m} value={m}>
+                           {m.replace(/\s*মৌজা\s*$/, '')}
+                         </option>
+                       ))}
+                       <option value="custom">নতুন মৌজার নাম লিখুন...</option>
+                     </select>
+                     
+                     {(!uniqueMouzas.includes(kh.mouza || '') && kh.mouza !== '') && (
+                       <input
+                         type="text"
+                         required
+                         placeholder="নতুন মৌজার নাম লিখুন..."
+                         value={kh.mouza?.trim() || ''}
+                         onChange={(e) => handleUpdateKhatian(kh.id, { mouza: e.target.value })}
+                         className="w-1/2 text-[13px] font-bold px-3 bg-white border border-slate-300 rounded-md focus:outline-none focus:border-emerald-600 font-sans h-9 text-text-primary placeholder:text-text-muted custom-shadow animate-in fade-in zoom-in duration-200"
+                       />
+                     )}
+                   </div>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-3 rounded-xl border border-border-subtle custom-shadow mt-3">
                 {/* CS */}
-                <div className="space-y-1 p-2 border rounded-lg border-slate-200 flex items-center gap-2">
+                <div className="space-y-1 p-2 border rounded-lg border-border-subtle flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={kh.hasCS}
@@ -1253,13 +1365,13 @@ export default function TransactionForm({
                       placeholder="নম্বর লিখুন..."
                       value={kh.csKhatian || ''}
                       onChange={(e) => handleUpdateKhatian(kh.id, { csKhatian: e.target.value })}
-                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-slate-50 text-slate-900 placeholder:text-slate-400 h-8"
+                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-ice-tint text-text-primary placeholder:text-text-muted h-8"
                     />
                   </div>
                 </div>
 
                 {/* SA */}
-                <div className="space-y-1 p-2 border rounded-lg border-slate-200 flex items-center gap-2">
+                <div className="space-y-1 p-2 border rounded-lg border-border-subtle flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={kh.hasSA}
@@ -1275,13 +1387,13 @@ export default function TransactionForm({
                       placeholder="নম্বর লিখুন..."
                       value={kh.saKhatian || ''}
                       onChange={(e) => handleUpdateKhatian(kh.id, { saKhatian: e.target.value })}
-                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-slate-50 text-slate-900 placeholder:text-slate-400 h-8"
+                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-ice-tint text-text-primary placeholder:text-text-muted h-8"
                     />
                   </div>
                 </div>
 
                 {/* RS */}
-                <div className="space-y-1 p-2 border rounded-lg border-slate-200 flex items-center gap-2">
+                <div className="space-y-1 p-2 border rounded-lg border-border-subtle flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={kh.hasRS}
@@ -1297,13 +1409,13 @@ export default function TransactionForm({
                       placeholder="নম্বর লিখুন..."
                       value={kh.rsKhatian || ''}
                       onChange={(e) => handleUpdateKhatian(kh.id, { rsKhatian: e.target.value })}
-                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-slate-50 text-slate-900 placeholder:text-slate-400 h-8"
+                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-ice-tint text-text-primary placeholder:text-text-muted h-8"
                     />
                   </div>
                 </div>
 
                 {/* Namjari */}
-                <div className="space-y-1 p-2 border rounded-lg border-slate-200 flex items-center gap-2">
+                <div className="space-y-1 p-2 border rounded-lg border-border-subtle flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={kh.hasNamjari}
@@ -1319,7 +1431,7 @@ export default function TransactionForm({
                       placeholder="নম্বর লিখুন..."
                       value={kh.namjariKhatian || ''}
                       onChange={(e) => handleUpdateKhatian(kh.id, { namjariKhatian: e.target.value })}
-                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-slate-50 text-slate-900 placeholder:text-slate-400 h-8"
+                      className="w-full text-xs font-bold px-2 py-1.5 border border-slate-300 rounded-md disabled:bg-ice-tint text-text-primary placeholder:text-text-muted h-8"
                     />
                   </div>
                 </div>
@@ -1328,14 +1440,14 @@ export default function TransactionForm({
               {/* Dags List */}
               <div className="space-y-3 mt-4 pt-2 pl-6 border-l-2 border-dashed border-emerald-300 relative ml-2 md:ml-4">
                 <div className="flex items-center justify-between border-b pb-1 border-slate-300 relative">
-                  <span className="text-[12px] font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <span className="text-[12px] font-extrabold text-text-primary flex items-center gap-1.5">
                     <div className="w-6 h-px bg-emerald-300 absolute -left-6 top-1/2"></div>
                     খতিয়ানের অন্তর্ভুক্ত দাগ সমূহের তালিকা
                   </span>
                   <button
                     type="button"
                     onClick={() => handleAddDag(kh.id)}
-                    className={`flex items-center gap-1 ${dagFeedbackId === kh.id ? 'bg-emerald-100 border-emerald-400 text-emerald-800 scale-95' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'} font-bold text-xs border px-3 py-1.5 rounded-lg hover:shadow-xs transition-all duration-200 select-none cursor-pointer relative z-10`}
+                    className={`flex items-center gap-1 ${dagFeedbackId === kh.id ? 'bg-emerald-100 border-emerald-400 text-emerald-800 scale-95' : 'bg-table-header hover:bg-slate-200 text-slate-700 border-slate-300'} font-bold text-xs border px-3 py-1.5 rounded-lg hover:custom-shadow transition-all duration-200 select-none cursor-pointer relative z-10`}
                   >
                     {dagFeedbackId === kh.id ? <Check size={12} className="text-emerald-600" /> : <Plus size={12} className="text-slate-700" />}
                     <span>{dagFeedbackId === kh.id ? 'যুক্ত হয়েছে!' : 'দাগ যোগ করুন'}</span>
@@ -1344,15 +1456,15 @@ export default function TransactionForm({
 
                 <div className="space-y-4 pt-2">
                   {kh.dags.map((dag, dagIdx) => (
-                    <div key={dag.id} className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-end bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm relative ml-2">
+                    <div key={dag.id} className="grid grid-cols-1 xl:grid-cols-12 gap-3 items-end bg-white p-3.5 rounded-xl border border-border-subtle custom-shadow relative ml-2">
                       {/* Connection notch for dag */}
                       <div className="absolute -left-8 top-6 w-8 h-px bg-emerald-300 hidden md:block"></div>
-                      <div className="absolute -left-[37px] top-6 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm z-10 hidden md:block"></div>
+                      <div className="absolute -left-[37px] top-6 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white custom-shadow z-10 hidden md:block"></div>
                       
                       {/* Checkboxes for dag */}
                       <div className="xl:col-span-7 grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4">
                         {/* CS */}
-                        <div className="flex items-center gap-1.5 p-1 border border-slate-200 rounded bg-slate-50/50">
+                        <div className="flex items-center gap-1.5 p-1 border border-border-subtle rounded bg-ice-tint/50">
                           <input
                             type="checkbox"
                             checked={dag.hasCS}
@@ -1368,13 +1480,13 @@ export default function TransactionForm({
                               placeholder="নম্বর..."
                               value={dag.csDag || ''}
                               onChange={(e) => handleUpdateDag(kh.id, dag.id, { csDag: e.target.value })}
-                              className="w-full px-1.5 border border-slate-400 disabled:bg-slate-50 text-xs font-bold text-slate-900 h-9 rounded"
+                              className="w-full px-1.5 border border-slate-400 disabled:bg-ice-tint text-xs font-bold text-text-primary h-9 rounded"
                             />
                           </div>
                         </div>
 
                         {/* SA */}
-                        <div className="flex items-center gap-1.5 p-1 border border-slate-200 rounded bg-slate-50/50">
+                        <div className="flex items-center gap-1.5 p-1 border border-border-subtle rounded bg-ice-tint/50">
                           <input
                             type="checkbox"
                             checked={dag.hasSA}
@@ -1390,13 +1502,13 @@ export default function TransactionForm({
                               placeholder="নম্বর..."
                               value={dag.saDag || ''}
                               onChange={(e) => handleUpdateDag(kh.id, dag.id, { saDag: e.target.value })}
-                              className="w-full px-1.5 border border-slate-400 disabled:bg-slate-50 text-xs font-bold text-slate-900 h-9 rounded"
+                              className="w-full px-1.5 border border-slate-400 disabled:bg-ice-tint text-xs font-bold text-text-primary h-9 rounded"
                             />
                           </div>
                         </div>
 
                         {/* RS */}
-                        <div className="flex items-center gap-1.5 p-1 border border-slate-200 rounded bg-slate-50/50">
+                        <div className="flex items-center gap-1.5 p-1 border border-border-subtle rounded bg-ice-tint/50">
                           <input
                             type="checkbox"
                             checked={dag.hasRS}
@@ -1412,7 +1524,7 @@ export default function TransactionForm({
                               placeholder="নম্বর..."
                               value={dag.rsDag || ''}
                               onChange={(e) => handleUpdateDag(kh.id, dag.id, { rsDag: e.target.value })}
-                              className="w-full px-1.5 border border-slate-400 disabled:bg-slate-50 text-xs font-bold text-slate-900 h-9 rounded"
+                              className="w-full px-1.5 border border-slate-400 disabled:bg-ice-tint text-xs font-bold text-text-primary h-9 rounded"
                             />
                           </div>
                         </div>
@@ -1429,72 +1541,137 @@ export default function TransactionForm({
 
                       {/* Amounts */}
                       <div className="xl:col-span-5 grid grid-cols-1 md:grid-cols-7 gap-2 md:gap-4 mt-2 md:mt-0">
-                        <div className="md:col-span-2">
-                          <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">মোট পরিমান(শ.)</label>
-                          <input
-                            type="number"
-                            step="any"
-                            required
-                            value={dag.totalAmount || ''}
-                            onChange={(e) => handleUpdateDag(kh.id, dag.id, { totalAmount: parseFloat(e.target.value) || 0 })}
-                            className="w-full text-xs font-bold px-2 border border-slate-400 h-9 rounded text-slate-900"
-                          />
-                        </div>
-                        
-                        <div className="md:col-span-2">
-                          <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                            {kh.hasNamjari ? 'নামজারীকৃত(শ.)' : 'কাতে পরিমান(শ.)'}
-                          </label>
-                          <input
-                            type="number"
-                            step="any"
-                            required
-                            value={kh.hasNamjari ? (dag.namjariAmount || '') : (dag.kateAmount || '')}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              if (kh.hasNamjari) {
-                                handleUpdateDag(kh.id, dag.id, { namjariAmount: val, kateAmount: 0 });
-                              } else {
-                                handleUpdateDag(kh.id, dag.id, { kateAmount: val, namjariAmount: 0 });
-                              }
-                            }}
-                            className="w-full text-xs font-bold px-2 border border-slate-400 h-9 rounded text-slate-900"
-                          />
-                        </div>
+                        {(() => {
+                          const currentNamjariOrKate = kh.hasNamjari ? (dag.namjariAmount || 0) : (dag.kateAmount || 0);
+                          const currentTotal = dag.totalAmount || 0;
+                          const currentAmount = dag.amount || 0;
+                          
+                          const isNamjariKateInvalid = currentTotal > 0 && currentNamjariOrKate > currentTotal;
+                          const isAmountInvalid = currentNamjariOrKate > 0 && currentAmount > currentNamjariOrKate;
 
-                        <div className="md:col-span-2">
-                          <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                            {type === 'purchase' ? 'ক্রয়কৃত(শ.)' : 'বিক্রীত(শ.)'}
-                          </label>
-                          <input
-                            type="number"
-                            step="any"
-                            required
-                            value={dag.amount || ''}
-                            onChange={(e) => handleUpdateDag(kh.id, dag.id, { amount: parseFloat(e.target.value) || 0 })}
-                            className="w-full text-xs font-bold px-2 border border-slate-500 h-9 rounded text-slate-900 bg-emerald-50 focus:bg-white"
-                          />
-                        </div>
+                          return (
+                            <>
+                              <div className="md:col-span-2">
+                                <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">মোট পরিমান(শ.)</label>
+                                <input
+                                  type="number"
+                                  step="any"
+                                  required
+                                  value={dag.totalAmount || ''}
+                                  onChange={(e) => handleUpdateDag(kh.id, dag.id, { totalAmount: parseFloat(e.target.value) || 0 })}
+                                  className="w-full text-xs font-bold px-2 border border-slate-400 h-9 rounded text-text-primary"
+                                />
+                              </div>
+                              
+                              <div className="md:col-span-2">
+                                <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                                  {kh.hasNamjari ? 'নামজারীকৃত(শ.)' : 'কাতে পরিমান(শ.)'}
+                                </label>
+                                <div className="relative group">
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    required
+                                    value={kh.hasNamjari ? (dag.namjariAmount || '') : (dag.kateAmount || '')}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value) || 0;
+                                      if (kh.hasNamjari) {
+                                        handleUpdateDag(kh.id, dag.id, { namjariAmount: val, kateAmount: 0 });
+                                      } else {
+                                        handleUpdateDag(kh.id, dag.id, { kateAmount: val, namjariAmount: 0 });
+                                      }
+                                    }}
+                                    className={`w-full text-xs font-bold px-2 border h-9 rounded text-text-primary transition-colors ${
+                                      isNamjariKateInvalid 
+                                        ? 'border-rose-500 bg-alert-peach text-rose-700 focus:outline-none focus:border-rose-600 focus:ring-1 focus:ring-rose-500' 
+                                        : 'border-slate-400'
+                                    }`}
+                                  />
+                                  {isNamjariKateInvalid && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap bg-alert-peach text-rose-700 border border-alert-border text-white text-[11px] font-bold px-2 py-1 rounded shadow-lg z-50">
+                                      বেশি হতে পারবে না
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-600"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
 
-                        <div className="md:col-span-1 flex items-end justify-end md:justify-start">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDag(kh.id, dag.id)}
-                            className="text-rose-500 hover:text-rose-700 p-1.5 border border-transparent hover:border-slate-200 rounded cursor-pointer transition flex items-center h-9 justify-center shrink-0 w-full"
-                            title="দাগ ডিলিট দিন"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+                              <div className="md:col-span-2">
+                                <label className="text-[11px] text-slate-700 block font-extrabold mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                                  {type === 'purchase' ? 'ক্রয়কৃত(শ.)' : 'বিক্রীত(শ.)'}
+                                </label>
+                                <div className="relative group">
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    required
+                                    value={dag.amount || ''}
+                                    onChange={(e) => handleUpdateDag(kh.id, dag.id, { amount: parseFloat(e.target.value) || 0 })}
+                                    className={`w-full text-xs font-bold px-2 border h-9 rounded text-text-primary transition-colors ${
+                                      isAmountInvalid 
+                                        ? 'border-rose-500 bg-alert-peach text-rose-700 focus:outline-none focus:border-rose-600 focus:ring-1 focus:ring-rose-500' 
+                                        : 'border-slate-500 bg-emerald-50 focus:bg-white focus:outline-none'
+                                    }`}
+                                  />
+                                  {isAmountInvalid && (
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap bg-alert-peach text-rose-700 border border-alert-border text-white text-[11px] font-bold px-2 py-1 rounded shadow-lg z-50">
+                                      বেশি হতে পারবে না
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-rose-600"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="md:col-span-1 flex items-end justify-end md:justify-start">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDag(kh.id, dag.id)}
+                                  className="text-rose-500 hover:text-rose-700 p-1.5 border border-transparent hover:border-border-subtle rounded cursor-pointer transition flex items-center h-9 justify-center shrink-0 w-full"
+                                  title="দাগ ডিলিট দিন"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Complete Schedule Button */}
+              <div className="mt-6 flex justify-end pt-4 border-t border-border-subtle">
+                <button
+                  type="button"
+                  onClick={() => setCompletedTafsils(prev => [...prev, kh.id])}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors custom-shadow"
+                >
+                  <Check size={14} />
+                  তফসিল সম্পন্ন
+                </button>
+              </div>
+
             </div>
-          ))}
+          );
+        })}
+
+        {/* Add another Tafsil */}
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={handleAddKhatian}
+            className="bg-table-header hover:bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 custom-shadow select-none"
+          >
+            <Plus size={16} />
+            একাধিক তফসিল যুক্ত করা
+          </button>
         </div>
       </div>
+      )}
+      </div>
+    </div>
 
       {/* Grid container to make Scans + Remarks on Left, and Totals Summary Box on Right in one line */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-4">
@@ -1502,17 +1679,17 @@ export default function TransactionForm({
         {/* Left column: Scans Upload + Remarks notes */}
         <div className="lg:col-span-7 space-y-4">
           {/* File Scans Upload panel */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-            <div className="border-b pb-1.5 border-slate-200 font-extrabold text-xs text-slate-800 flex items-center gap-1.5">
-              <FileCheck size={15} className="text-teal-600" />
+          <div className="bg-white rounded-[20px] border border-border-subtle p-5 space-y-4">
+            <div className="border-b pb-1.5 border-border-subtle font-extrabold text-xs text-text-primary flex items-center gap-1.5">
+              <FileCheck size={15} className="text-slate-teal" />
               দলিলের স্ক্যান কপি বা মূল দলিল ছবি সংযুক্তি
             </div>
 
             {/* Drive Link Input Zone */}
-            <div className="border border-slate-300 rounded-xl p-4 space-y-3 bg-slate-50/50">
+            <div className="border border-slate-300 rounded-xl p-4 space-y-3 bg-ice-tint/50">
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">ফাইলের নাম/শিরোনাম (ঐচ্ছিক)</label>
+                  <label className="text-[10px] font-bold text-text-muted uppercase">ফাইলের নাম/শিরোনাম (ঐচ্ছিক)</label>
                   <input
                     type="text"
                     value={linkTitle}
@@ -1522,7 +1699,7 @@ export default function TransactionForm({
                   />
                 </div>
                 <div className="flex-1 space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">গুগল ড্রাইভ লিংক *</label>
+                  <label className="text-[10px] font-bold text-text-muted uppercase">গুগল ড্রাইভ লিংক *</label>
                   <input
                     type="url"
                     value={linkUrl}
@@ -1546,12 +1723,12 @@ export default function TransactionForm({
             {attachments.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {attachments.map((file) => (
-                  <div key={file.id} className="flex justify-between items-center bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
+                  <div key={file.id} className="flex justify-between items-center bg-ice-tint border border-border-subtle p-2.5 rounded-xl">
                     <div className="truncate max-w-[150px] font-semibold text-slate-700" title={file.name}>
                       {file.name}
                     </div>
-                    <div className="flex items-center gap-2 border-l border-slate-200 pl-2 shrink-0">
-                      <span className="text-[10px] text-slate-400 font-mono italic">লিংক</span>
+                    <div className="flex items-center gap-2 border-l border-border-subtle pl-2 shrink-0">
+                      <span className="text-[10px] text-text-muted font-mono italic">লিংক</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1567,7 +1744,7 @@ export default function TransactionForm({
                       <button
                         type="button"
                         onClick={() => handleRemoveAttachment(file.id)}
-                        className="text-rose-600 hover:text-rose-800 cursor-pointer"
+                        className="text-rose-700 hover:text-rose-800 cursor-pointer"
                         title="ফাইলটি মুছে ফেলুন"
                       >
                         <X size={13} />
@@ -1580,9 +1757,9 @@ export default function TransactionForm({
           </div>
 
           {/* Remarks Notes memo comment */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
-            <label className="text-slate-500 flex items-center gap-1 font-bold">
-              <FileText size={14} className="text-slate-400" />
+          <div className="bg-white rounded-[20px] border border-border-subtle p-5 space-y-2">
+            <label className="text-text-muted flex items-center gap-1 font-bold">
+              <FileText size={14} className="text-text-muted" />
               অতিরিক্ত বিশেষ মন্তব্য বা দলিল টোকা (ঐচ্ছিক)
             </label>
             <textarea
@@ -1598,21 +1775,21 @@ export default function TransactionForm({
         {/* Right column: Smaller of the Summaries ("রাইট সাইটে হবে, আরো ছোট হবে") */}
         <div className="lg:col-span-5">
           {/* Live Aggregated Totals Summary Box */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 h-full flex flex-col justify-between">
+          <div className="bg-ice-tint border border-border-subtle rounded-[20px] p-5 space-y-4 h-full flex flex-col justify-between">
             <div>
               <h4 className="text-xs font-black text-slate-700 uppercase tracking-wide flex items-center gap-1.5 border-b pb-2">
                 <CheckCircle2 size={13} className="text-emerald-600" />
                 মোট জমি সারসংক্ষেপ (অটোক্যালকুলেটেড)
               </h4>
               <div className="grid grid-cols-1 gap-3 mt-3">
-                <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col items-center justify-center text-center shadow-xs">
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">নামজারীকৃত কাতের পরিমাণ</span>
-                  <span className="text-base font-black text-slate-800 mt-1">
+                <div className="bg-white border border-border-subtle rounded-xl p-3.5 flex flex-col items-center justify-center text-center custom-shadow">
+                  <span className="text-[10px] font-extrabold text-text-muted uppercase tracking-wider">নামজারীকৃত কাতের পরিমাণ</span>
+                  <span className="text-base font-black text-text-primary mt-1">
                     {toBengaliNumber(khatians.reduce((s, kh) => s + kh.dags.reduce((ds, d) => ds + (Number(d.namjariAmount) || 0), 0), 0).toFixed(2))} শতক
                   </span>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex flex-col items-center justify-center text-center shadow-xs">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex flex-col items-center justify-center text-center custom-shadow">
                   <span className="text-[10px] font-extrabold text-emerald-900 uppercase tracking-wider">মোট হস্তান্তর পরিমাণ</span>
                   <span className="text-base font-black text-emerald-950 mt-1 font-mono">
                     {toBengaliNumber(khatians.reduce((s, kh) => s + kh.dags.reduce((ds, d) => ds + (Number(d.amount) || 0), 0), 0).toFixed(2))} শতক
@@ -1620,28 +1797,36 @@ export default function TransactionForm({
                 </div>
               </div>
             </div>
-            <div className="text-[10px] text-slate-400 text-center font-medium mt-3 border-t border-slate-200/50 pt-3">
+            <div className="text-[10px] text-text-muted text-center font-medium mt-3 border-t border-border-subtle/50 pt-3">
               অটোক্যালকুলেশন সচল রয়েছে
             </div>
           </div>
         </div>
-
-      </div>
       </div>
 
       {/* CRUD control buttons */}
-      <div className="border-t border-slate-200 pt-5 flex justify-end gap-3.5">
-        <button
+      <div className="border-t border-border-subtle pt-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex-1 w-full md:w-auto">
+          {/* feedback message warning */}
+          {errorText && (
+            <div className="bg-alert-peach border border-rose-200 text-rose-800 p-3 rounded-xl flex items-start gap-2 max-w-2xl animate-shake custom-shadow">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-700" />
+              <p className="font-bold leading-relaxed text-[11px] md:text-xs">{errorText}</p>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3.5 shrink-0 w-full md:w-auto">
+          <button
           type="button"
           onClick={onCancelEdit}
-          className="px-5 py-2.5 text-xs text-slate-700 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer select-none font-bold"
+          className="px-5 py-2.5 text-xs text-slate-700 hover:text-text-primary bg-table-header hover:bg-slate-200 rounded-xl transition cursor-pointer select-none font-bold"
         >
           বাতিল করে ফিরে যান
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 rounded-xl shadow-md cursor-pointer transition select-none flex items-center gap-1.5"
+          className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 rounded-full custom-shadow cursor-pointer transition select-none flex items-center gap-1.5"
         >
           {isSubmitting ? (
             <>
@@ -1655,6 +1840,7 @@ export default function TransactionForm({
             </>
           )}
         </button>
+        </div>
       </div>
 
     </form>

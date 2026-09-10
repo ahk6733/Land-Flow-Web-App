@@ -308,7 +308,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
 
   const renderAuthForm = () => (
     <>
-      <div className="flex border-b border-slate-200 pb-3 justify-center gap-6">
+      <div className="flex border-b border-border-subtle pb-3 justify-center gap-6">
         <button
           onClick={() => {
             setIsLogin(true);
@@ -317,11 +317,11 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             setShowOtpField(false);
           }}
           className={`text-sm font-bold pb-2 transition-all relative ${
-            isLogin ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'
+            isLogin ? 'text-slate-teal' : 'text-text-muted hover:text-text-primary'
           }`}
         >
           লগইন করুন
-          {isLogin && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />}
+          {isLogin && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-ice-tint0 rounded-full" />}
         </button>
         <button
           onClick={() => {
@@ -331,11 +331,11 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             setShowOtpField(false);
           }}
           className={`text-sm font-bold pb-2 transition-all relative ${
-            !isLogin ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'
+            !isLogin ? 'text-slate-teal' : 'text-text-muted hover:text-text-primary'
           }`}
         >
           নতুন অ্যাকাউন্ট খুলুন
-          {!isLogin && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />}
+          {!isLogin && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-ice-tint0 rounded-full" />}
         </button>
       </div>
 
@@ -343,7 +343,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
         <button
           onClick={() => setAuthMethod('email')}
           className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-            authMethod === 'email' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200 text-slate-500 bg-white hover:bg-slate-50'
+            authMethod === 'email' ? 'bg-ice-tint border-indigo-500 text-slate-teal' : 'border-border-subtle text-text-muted bg-white hover:bg-ice-tint'
           }`}
         >
           ইমেইল
@@ -351,7 +351,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
         <button
           onClick={() => setAuthMethod('phone')}
           className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-            authMethod === 'phone' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'border-slate-200 text-slate-500 bg-white hover:bg-slate-50'
+            authMethod === 'phone' ? 'bg-ice-tint border-indigo-500 text-slate-teal' : 'border-border-subtle text-text-muted bg-white hover:bg-ice-tint'
           }`}
         >
           মোবাইল নম্বর
@@ -359,7 +359,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
       </div>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start gap-2 animate-pulse">
+        <div className="bg-alert-peach border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start gap-2 animate-pulse">
           <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-500" />
           <span>{errorMessage}</span>
         </div>
@@ -383,8 +383,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
                   onClick={() => setUserType('personal')}
                   className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     userType === 'personal'
-                      ? 'bg-indigo-500/20 border-indigo-500 text-indigo-600'
-                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700'
+                      ? 'bg-ice-tint0/20 border-indigo-500 text-slate-teal'
+                      : 'bg-ice-tint border-border-subtle text-text-muted hover:text-slate-700'
                   }`}
                 >
                   <User size={13} /> ব্যক্তিগত
@@ -394,8 +394,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
                   onClick={() => setUserType('company')}
                   className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     userType === 'company'
-                      ? 'bg-indigo-500/20 border-indigo-500 text-indigo-600'
-                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700'
+                      ? 'bg-ice-tint0/20 border-indigo-500 text-slate-teal'
+                      : 'bg-ice-tint border-border-subtle text-text-muted hover:text-slate-700'
                   }`}
                 >
                   <Briefcase size={13} /> কোম্পানি
@@ -405,8 +405,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700">পূর্ণ নাম</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User size={15} /></span>
-                  <input type="text" required placeholder="নাম" value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><User size={15} /></span>
+                  <input type="text" required placeholder="নাম" value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
                 </div>
               </div>
               
@@ -414,11 +414,11 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
                 <>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700">কোম্পানির নাম</label>
-                    <input type="text" required placeholder="কোম্পানির নাম" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full text-xs px-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                    <input type="text" required placeholder="কোম্পানির নাম" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="w-full text-xs px-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-slate-700">কোম্পানির ঠিকানা</label>
-                    <input type="text" required placeholder="ঠিকানা" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="w-full text-xs px-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                    <input type="text" required placeholder="ঠিকানা" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="w-full text-xs px-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
                   </div>
                 </>
               )}
@@ -426,8 +426,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700">মোবাইল নম্বর</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Phone size={15} /></span>
-                  <input type="tel" required placeholder="01711223344" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><Phone size={15} /></span>
+                  <input type="tel" required placeholder="01711223344" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
                 </div>
               </div>
             </>
@@ -436,8 +436,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-700">ইমেইল ঠিকানা</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Mail size={15} /></span>
-              <input type="email" required placeholder="example@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><Mail size={15} /></span>
+              <input type="email" required placeholder="example@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
             </div>
           </div>
 
@@ -452,16 +452,16 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
                     setSuccessMessage(null);
                     setViewState('forgotPassword');
                   }}
-                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-600 transition-colors"
+                  className="text-[11px] font-semibold text-slate-teal hover:text-slate-teal transition-colors"
                 >
                   পাসওয়ার্ড ভুলে গেছেন?
                 </button>
               )}
             </div>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><KeyRound size={15} /></span>
-              <input type={showPassword ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full text-xs pl-9 pr-10 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-700 cursor-pointer">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><KeyRound size={15} /></span>
+              <input type={showPassword ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full text-xs pl-9 pr-10 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-slate-700 cursor-pointer">
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
@@ -471,8 +471,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700">পাসওয়ার্ড নিশ্চিত করুন</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><KeyRound size={15} /></span>
-                <input type={showPassword ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full text-xs pl-9 pr-10 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><KeyRound size={15} /></span>
+                <input type={showPassword ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full text-xs pl-9 pr-10 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
           )}
@@ -486,14 +486,14 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
           {!isLogin && !showOtpField && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setUserType('personal')} className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${userType === 'personal' ? 'bg-indigo-500/20 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500'}`}><User size={13} /> ব্যক্তিগত</button>
-                <button type="button" onClick={() => setUserType('company')} className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${userType === 'company' ? 'bg-indigo-500/20 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500'}`}><Briefcase size={13} /> কোম্পানি</button>
+                <button type="button" onClick={() => setUserType('personal')} className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${userType === 'personal' ? 'bg-ice-tint0/20 border-indigo-500 text-slate-teal' : 'bg-ice-tint border-border-subtle text-text-muted'}`}><User size={13} /> ব্যক্তিগত</button>
+                <button type="button" onClick={() => setUserType('company')} className={`py-2 px-3 text-xs rounded-xl border text-center font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${userType === 'company' ? 'bg-ice-tint0/20 border-indigo-500 text-slate-teal' : 'bg-ice-tint border-border-subtle text-text-muted'}`}><Briefcase size={13} /> কোম্পানি</button>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700">পূর্ণ নাম</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User size={15} /></span>
-                  <input type="text" required placeholder="নাম" value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><User size={15} /></span>
+                  <input type="text" required placeholder="নাম" value={name} onChange={(e) => setName(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
                 </div>
               </div>
             </>
@@ -503,14 +503,14 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700">মোবাইল নম্বর</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Phone size={15} /></span>
-                <input type="tel" required placeholder="01711223344" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><Phone size={15} /></span>
+                <input type="tel" required placeholder="01711223344" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
           ) : (
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-700">ওটিপি কোড</label>
-              <input type="text" required placeholder="৬ ডিজিটের কোড" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full text-center tracking-widest text-lg px-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+              <input type="text" required placeholder="৬ ডিজিটের কোড" value={otp} onChange={(e) => setOtp(e.target.value)} className="w-full text-center tracking-widest text-lg px-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
             </div>
           )}
 
@@ -521,15 +521,15 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
       )}
 
       <div className="relative flex items-center py-4">
-        <div className="flex-grow border-t border-slate-200"></div>
-        <span className="shrink-0 px-3 text-slate-500 text-[10px]">অথবা</span>
-        <div className="flex-grow border-t border-slate-200"></div>
+        <div className="flex-grow border-t border-border-subtle"></div>
+        <span className="shrink-0 px-3 text-text-muted text-[10px]">অথবা</span>
+        <div className="flex-grow border-t border-border-subtle"></div>
       </div>
 
       <button 
         onClick={handleGoogleAuth}
         disabled={isLoading}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 hover:bg-slate-50 transition-all text-slate-700 font-bold text-xs rounded-xl shadow-sm cursor-pointer disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-border-subtle hover:bg-ice-tint transition-all text-slate-700 font-bold text-xs rounded-full custom-shadow cursor-pointer disabled:opacity-50"
       >
         <svg viewBox="0 0 24 24" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -546,26 +546,26 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
 
   const renderForgotPassword = () => (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+      <div className="flex items-center gap-3 border-b border-border-subtle pb-4">
         <button 
           onClick={() => {
             setViewState('auth');
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-600 cursor-pointer"
+          className="p-1.5 hover:bg-table-header rounded-lg transition-colors text-slate-teal cursor-pointer"
         >
           <ArrowLeft size={18} />
         </button>
-        <h3 className="text-sm font-bold text-slate-800">পাসওয়ার্ড রিসেট করুন</h3>
+        <h3 className="text-sm font-bold text-text-primary">পাসওয়ার্ড রিসেট করুন</h3>
       </div>
       
-      <p className="text-xs text-slate-500 leading-relaxed">
+      <p className="text-xs text-text-muted leading-relaxed">
         আপনার অ্যাকাউন্টের ইমেইল ঠিকানা দিন। আমরা আপনাকে একটি লিঙ্ক পাঠাব যা দিয়ে আপনি নতুন পাসওয়ার্ড সেট করতে পারবেন।
       </p>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start gap-2 animate-pulse">
+        <div className="bg-alert-peach border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start gap-2 animate-pulse">
           <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-500" />
           <span>{errorMessage}</span>
         </div>
@@ -582,8 +582,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
         <div className="space-y-1.5">
           <label className="text-[11px] font-bold text-slate-700">ইমেইল ঠিকানা</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Mail size={15} /></span>
-            <input type="email" required placeholder="example@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 shadow-sm rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500" />
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><Mail size={15} /></span>
+            <input type="email" required placeholder="example@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs pl-9 pr-4 py-3 bg-white border border-slate-300 custom-shadow rounded-xl text-text-primary focus:outline-none focus:border-indigo-500" />
           </div>
         </div>
 
@@ -596,18 +596,18 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
 
   const renderEmailVerification = () => (
     <div className="space-y-6 text-center py-4">
-      <div className="w-16 h-16 bg-indigo-500/20 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2">
+      <div className="w-16 h-16 bg-ice-tint0/20 text-slate-teal rounded-full flex items-center justify-center mx-auto mb-2">
         <Mail size={32} />
       </div>
       
-      <h3 className="text-lg font-bold text-slate-800">ইমেইল ভেরিফাই করুন</h3>
+      <h3 className="text-lg font-bold text-text-primary">ইমেইল ভেরিফাই করুন</h3>
       
-      <p className="text-xs text-slate-500 leading-relaxed px-4">
-        আমরা আপনার ইমেইলে (<strong className="text-indigo-600">{email}</strong>) একটি ভেরিফিকেশন লিঙ্ক পাঠিয়েছি। অনুগ্রহ করে আপনার ইনবক্স (বা স্প্যাম ফোল্ডার) চেক করুন এবং লিঙ্কে ক্লিক করে ভেরিফাই করুন।
+      <p className="text-xs text-text-muted leading-relaxed px-4">
+        আমরা আপনার ইমেইলে (<strong className="text-slate-teal">{email}</strong>) একটি ভেরিফিকেশন লিঙ্ক পাঠিয়েছি। অনুগ্রহ করে আপনার ইনবক্স (বা স্প্যাম ফোল্ডার) চেক করুন এবং লিঙ্কে ক্লিক করে ভেরিফাই করুন।
       </p>
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start text-left gap-2 animate-pulse mx-auto">
+        <div className="bg-alert-peach border border-rose-200 text-rose-700 text-xs py-3 px-4 rounded-xl flex items-start text-left gap-2 animate-pulse mx-auto">
           <ShieldAlert size={16} className="shrink-0 mt-0.5 text-rose-500" />
           <span>{errorMessage}</span>
         </div>
@@ -654,7 +654,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             }
           }}
           disabled={isLoading}
-          className="w-full py-3 border border-indigo-500/30 hover:bg-indigo-500/10 disabled:opacity-50 transition-all text-indigo-600 font-bold text-xs rounded-xl cursor-pointer"
+          className="w-full py-3 border border-indigo-500/30 hover:bg-ice-tint0/10 disabled:opacity-50 transition-all text-slate-teal font-bold text-xs rounded-xl cursor-pointer"
         >
           আবার লিঙ্ক পাঠান (Resend)
         </button>
@@ -666,7 +666,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
             setErrorMessage(null);
             setSuccessMessage(null);
           }}
-          className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 transition-all text-slate-700 font-bold text-xs rounded-xl shadow-sm cursor-pointer"
+          className="w-full py-3 bg-white border border-border-subtle hover:bg-ice-tint transition-all text-slate-700 font-bold text-xs rounded-full custom-shadow cursor-pointer"
         >
           লগইন পেজে ফিরে যান
         </button>
@@ -675,8 +675,8 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-y-auto font-sans">
-      <div className="absolute top-1/4 left-1/4 w-[350px] h-[350px] rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
+    <div className="min-h-screen bg-ice-tint flex flex-col items-center justify-center p-4 relative overflow-y-auto font-sans">
+      <div className="absolute top-1/4 left-1/4 w-[350px] h-[350px] rounded-full bg-ice-tint0/10 blur-[80px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full bg-purple-500/10 blur-[80px] pointer-events-none" />
 
       <div className="max-w-md w-full relative z-10 space-y-6 my-8">
@@ -685,7 +685,7 @@ export default function AuthGate({ onLoginSuccess }: AuthGateProps) {
           <p className="text-indigo-800/80 text-xs font-medium tracking-wide">জমির খতিয়ান, দাগের হিসাব ও দলিল ডিজিটাল রেকর্ড বুক</p>
         </div>
 
-        <div className="bg-white backdrop-blur-none border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div className="bg-white backdrop-blur-none border border-border-subtle rounded-[20px] p-6 sm:p-8 shadow-xl">
           {viewState === 'auth' && renderAuthForm()}
           {viewState === 'forgotPassword' && renderForgotPassword()}
           {viewState === 'emailVerification' && renderEmailVerification()}

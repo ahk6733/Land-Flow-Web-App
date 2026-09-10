@@ -157,12 +157,14 @@ export default function SearchQuery({
                       '<strong>দলিল নং ' + toBengaliNumber(tx.deedNumber) + '</strong><br/>' +
                       '<span style="color:#666">(' + toBengaliNumber(tx.date) + ')</span>' +
                     '</td>' +
-                    '<td rowspan="' + group.rows.length + '" class="text-center" style="vertical-align: middle;"><strong>' + (tx.deedNature || '-') + '</strong></td>' +
-                    '<td rowspan="' + group.rows.length + '" class="text-center" style="vertical-align: middle;"><strong>' + tx.mouza.replace(/\s*মৌজা\s*$/, '') + '</strong></td>';
+                    '<td rowspan="' + group.rows.length + '" class="text-center" style="vertical-align: middle;"><strong>' + (tx.deedNature || '-') + '</strong></td>';
                   }
+
+                  const rowMouza = (khatian.mouza?.trim() || tx.mouza).replace(/\s*মৌজা\s*$/, '');
 
                   rowsHtml += '<tr>' +
                     firstCols +
+                    '<td class="text-center" style="vertical-align: middle;"><strong>' + rowMouza + '</strong></td>' +
                     '<td>' + toBengaliNumber(kParts.join(', ')) + '</td>' +
                     '<td>' + toBengaliNumber(dParts.join(', ')) + '</td>' +
                     '<td>' + (dag.landClass || '-') + '</td>' +
@@ -217,7 +219,7 @@ export default function SearchQuery({
   const analysis = analyzeLandData(transactions);
 
   // Generate unique Mouza dropdown list based on current transactions
-  const uniqueMouzas = Array.from(new Set(transactions.map((t) => t.mouza))).filter(Boolean);
+  const uniqueMouzas = Array.from(new Set(transactions.flatMap(t => [t.mouza, ...t.khatians.map(k => k.mouza?.trim())]))).filter(Boolean);
 
   // Filter Khatian or Dag list based on search parameters
   let filteredKhatiansList = analysis.khatiansList;
@@ -242,7 +244,8 @@ export default function SearchQuery({
   
   transactions.forEach((t) => {
     // Mouza filter
-    if (selectedMouza && t.mouza !== selectedMouza) return;
+    const txMouzas = [t.mouza, ...t.khatians.map(k => k.mouza?.trim())].filter(Boolean);
+    if (selectedMouza && !txMouzas.includes(selectedMouza)) return;
     
     // Term filter
     const rowsForTx: { khatian: any, dag: any }[] = [];
@@ -361,27 +364,27 @@ export default function SearchQuery({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Search Console Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div className="bg-white rounded-[20px] border border-border-subtle p-6 custom-shadow space-y-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 font-sans flex items-center gap-2">
-            <Search className="text-indigo-700" size={20} />
+          <h2 className="text-xl font-bold text-text-primary font-sans flex items-center gap-2">
+            <Search className="text-slate-teal" size={20} />
             দাগ ও খতিয়ান ভিত্তিক বিস্তারিত অনুসন্ধ্যান লেজার
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             মৌজা ম্যাপ সীমানা, দাগের খণ্ড অবশিষ্ট পরিমাণ ও দলিল ভিত্তিক জমি ক্রয়-বিক্রয়ের ব্যালেন্স রিপোর্ট দেখুন।
           </p>
         </div>
 
         {/* Input Parameters Form layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs font-semibold">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-ice-tint p-4 rounded-xl border border-border-subtle text-xs font-semibold">
           <div className="space-y-1">
-            <label className="text-slate-500">অনুসন্ধান ফিল্টার টাইপ</label>
+            <label className="text-text-muted">অনুসন্ধান ফিল্টার টাইপ</label>
             <div className="flex bg-white rounded-lg border border-slate-300 p-0.5">
               <button
                 type="button"
                 onClick={() => setSearchType('khatian')}
                 className={`flex-1 text-center py-1.5 rounded-md font-bold cursor-pointer transition ${
-                  searchType === 'khatian' ? 'bg-indigo-700 text-white' : 'text-slate-600 hover:text-slate-800'
+                  searchType === 'khatian' ? 'bg-indigo-700 text-white' : 'text-slate-teal hover:text-text-primary'
                 }`}
               >
                 খতিয়ান দিয়ে অনুসন্ধান
@@ -390,7 +393,7 @@ export default function SearchQuery({
                 type="button"
                 onClick={() => setSearchType('dag')}
                 className={`flex-1 text-center py-1.5 rounded-md font-bold cursor-pointer transition ${
-                  searchType === 'dag' ? 'bg-indigo-700 text-white' : 'text-slate-600 hover:text-slate-800'
+                  searchType === 'dag' ? 'bg-indigo-700 text-white' : 'text-slate-teal hover:text-text-primary'
                 }`}
               >
                 দাগ নং দিয়ে অনুসন্ধান
@@ -399,7 +402,7 @@ export default function SearchQuery({
           </div>
 
           <div className="space-y-1">
-            <label className="text-slate-500">মৌজার নাম সিলেক্ট করুন (ঐচ্ছিক)</label>
+            <label className="text-text-muted">মৌজার নাম সিলেক্ট করুন (ঐচ্ছিক)</label>
             <select
               value={selectedMouza}
               onChange={(e) => setSelectedMouza(e.target.value)}
@@ -415,11 +418,11 @@ export default function SearchQuery({
           </div>
 
           <div className="space-y-1 sm:col-span-2">
-            <label className="text-indigo-700">
+            <label className="text-slate-teal">
               {searchType === 'khatian' ? 'খতিয়ান নম্বর লিখুন (যেমন: ১২৩ বা ৪৫৬)' : 'দাগ নম্বর লিখুন (যেমন: ৫০১)'}
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-text-muted">
                 <Search size={14} />
               </span>
               <input
@@ -438,14 +441,18 @@ export default function SearchQuery({
       <div className="grid grid-cols-1 gap-6">
         
         {/* Document register matching records and scanner download attachments */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[520px] overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-200 bg-white flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 shrink-0">
-            <span className="text-[13px] font-bold text-teal-900 flex items-center gap-2">
+        <div className="bg-white rounded-[20px] border border-border-subtle custom-shadow flex flex-col h-[520px] overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-subtle bg-white flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 shrink-0 relative">
+            <span className="text-[13px] font-bold text-teal-900 flex items-center gap-2 z-10">
               <CheckCircle2 size={16} className="text-teal-700" />
               {query ? `"${query}" এর জন্য পূর্বের জমির রেকর্ড` : `সকল জমির রেকর্ড (${toBengaliNumber(matchedTransactionsGroups.length)}টি দলিল)`}
             </span>
             
-            <div className="flex items-center gap-2">
+            <span className="hidden sm:block absolute left-1/2 -translate-x-1/2 font-black text-rose-600 text-[13px] animate-pulse-scale drop-shadow-sm">
+              তথ্য সিলেক্ট করে সম্পাদন করুন
+            </span>
+
+            <div className="flex items-center gap-2 z-10">
               {selectedGroupIds.size === 1 && (
                 <>
                   <button
@@ -465,7 +472,7 @@ export default function SearchQuery({
                         const group = matchedTransactionsGroups.find(g => g.tx.id === txId);
                         if (group) onPrintTransaction(group.tx);
                     }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors"
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-ice-tint border border-border-subtle text-slate-teal rounded-lg hover:bg-mint-pill transition-colors"
                   >
                     <FileDown size={14} />
                     সিঙ্গেল ভিউ ও প্রিন্ট
@@ -478,7 +485,7 @@ export default function SearchQuery({
                         newSet.delete(txId);
                         setSelectedGroupIds(newSet);
                     }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 rounded-lg hover:bg-rose-100 transition-colors"
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-alert-peach border border-rose-200 text-rose-700 rounded-lg hover:bg-rose-100 transition-colors"
                   >
                     <Trash2 size={14} />
                     ডিলিট
@@ -487,7 +494,7 @@ export default function SearchQuery({
               )}
               <button
                 onClick={handlePrintRecords}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-ice-tint hover:text-text-primary transition-colors"
                 title="পিডিএফ প্রিন্ট"
               >
                 <FileDown size={14} />
@@ -497,7 +504,7 @@ export default function SearchQuery({
               {query && (
                 <button 
                   onClick={() => { setQueryTerm(''); setSelectedMouza(''); }}
-                  className="text-slate-400 hover:text-slate-600 focus:outline-none transition-colors ml-2"
+                  className="text-text-muted hover:text-slate-teal focus:outline-none transition-colors ml-2"
                   title="অনুসন্ধান বাতিল করুন"
                 >
                   <X size={16} />
@@ -506,34 +513,34 @@ export default function SearchQuery({
             </div>
           </div>
 
-          <div className="flex-grow overflow-x-auto p-4 space-y-4 bg-slate-50">
+          <div className="flex-grow overflow-x-auto p-4 space-y-4 bg-ice-tint">
             {matchedTransactionsGroups.length === 0 ? (
-              <div className="text-center text-slate-400 py-16 text-xs italic font-sans flex flex-col items-center justify-center gap-2 border border-slate-200 bg-white rounded-xl">
+              <div className="text-center text-text-muted py-16 text-xs italic font-sans flex flex-col items-center justify-center gap-2 border border-border-subtle bg-white rounded-xl">
                 <Info size={24} className="text-slate-300" />
                 <span>আপনার অনুসন্ধানের সাথে মিল থাকা কোনো রেকর্ড পাওয়া যায়নি।</span>
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-lg bg-white shadow-sm overflow-x-auto min-w-[800px] max-h-full overflow-y-auto">
-                <table className="w-full text-left text-[11px] text-slate-800 font-semibold border-collapse">
+              <div className="border border-border-subtle rounded-lg bg-white custom-shadow overflow-x-auto min-w-[800px] max-h-full overflow-y-auto">
+                <table className="w-full text-left text-[11px] text-text-primary font-semibold border-collapse">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-extrabold whitespace-nowrap">
-                      <th className="px-2 py-1 border-r border-slate-200 w-10 text-center">
+                    <tr className="bg-ice-tint/80 border-b border-border-subtle text-slate-700 font-extrabold whitespace-nowrap">
+                      <th className="px-2 py-1 border-r border-border-subtle w-10 text-center">
                         <input 
                           type="checkbox" 
                           checked={selectedGroupIds.size === matchedTransactionsGroups.length && matchedTransactionsGroups.length > 0} 
                           onChange={handleSelectAllGroup}
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-slate-teal focus:ring-indigo-500 cursor-pointer"
                         />
                       </th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">দলিল নং ও তারিখ</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">দলিলের প্রকৃতি</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">মৌজার নাম</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">খতিয়ান নম্বর</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">সংশ্লিষ্ট দাগ</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">শ্রেণী</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">দাগের মোট জমি</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">নামজারী/কাতে পরিমান</th>
-                      <th className="px-2 py-1 border-r border-slate-200 text-center">অর্জিত / হস্তান্তরিত জমি</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">দলিল নং ও তারিখ</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">দলিলের প্রকৃতি</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">মৌজার নাম</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">খতিয়ান নম্বর</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">সংশ্লিষ্ট দাগ</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">শ্রেণী</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">দাগের মোট জমি</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">নামজারী/কাতে পরিমান</th>
+                      <th className="px-2 py-1 border-r border-border-subtle text-center">অর্জিত / হস্তান্তরিত জমি</th>
                       <th className="px-2 py-1 text-center">ডকুমেন্ট</th>
                     </tr>
                   </thead>
@@ -557,37 +564,37 @@ export default function SearchQuery({
                           if (dag.hasRS && dag.rsDag) dParts.push(`আর.এস: ${dag.rsDag}`);
 
                           return (
-                            <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors">
+                            <tr key={rIdx} className="hover:bg-ice-tint/50 transition-colors">
                               {rIdx === 0 && (
                                  <>
-                                   <td className="px-2 py-1 border-r border-slate-200 align-top text-center" rowSpan={group.rows.length}>
+                                   <td className="px-2 py-1 border-r border-border-subtle align-top text-center" rowSpan={group.rows.length}>
                                      <input 
                                        type="checkbox" 
                                        checked={selectedGroupIds.has(tx.id)} 
                                        onChange={() => handleToggleSelectGroup(tx.id)}
-                                       className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-1"
+                                       className="w-3.5 h-3.5 rounded border-slate-300 text-slate-teal focus:ring-indigo-500 cursor-pointer mt-1"
                                      />
                                    </td>
-                                   <td className="px-2 py-1 border-r border-slate-200 align-top" rowSpan={group.rows.length}>
+                                   <td className="px-2 py-1 border-r border-border-subtle align-top" rowSpan={group.rows.length}>
                                      <div className="font-bold mb-0.5">
                                        <span>দলিল নং {toBengaliNumber(tx.deedNumber)}</span><br/>
-                                       <span className="font-sans font-normal text-slate-500 whitespace-nowrap text-[10px]">({toBengaliNumber(tx.date)})</span>
+                                       <span className="font-sans font-normal text-text-muted whitespace-nowrap text-[10px]">({toBengaliNumber(tx.date)})</span>
                                      </div>
                                    </td>
-                                   <td className="px-2 py-1 border-r border-slate-200 align-middle text-center whitespace-nowrap font-bold text-slate-700" rowSpan={group.rows.length}>
+                                   <td className="px-2 py-1 border-r border-border-subtle align-middle text-center whitespace-nowrap font-bold text-slate-700" rowSpan={group.rows.length}>
                                      {tx.deedNature || '-'}
-                                   </td>
-                                   <td className="px-2 py-1 border-r border-slate-200 align-middle text-center whitespace-nowrap font-bold text-slate-900" rowSpan={group.rows.length}>
-                                     {tx.mouza.replace(/\s*মৌজা\s*$/, '')}
                                    </td>
                                  </>
                               )}
-                              <td className="px-2 py-1 border-r border-slate-200 whitespace-nowrap">{toBengaliNumber(kParts.join(', '))}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 whitespace-nowrap">{toBengaliNumber(dParts.join(', '))}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 whitespace-nowrap">{dag.landClass || '-'}</td>
-                              <td className="px-2 py-1 border-r border-slate-200 text-center font-sans font-medium text-slate-600 whitespace-nowrap">{toBengaliNumber(dag.totalAmount)} শতক</td>
-                              <td className="px-2 py-1 border-r border-slate-200 text-center font-sans font-medium text-slate-600 whitespace-nowrap">{toBengaliNumber(khatian.hasNamjari ? (dag.namjariAmount || 0) : (dag.kateAmount || 0))} শতক</td>
-                              <td className={`px-2 py-1 border-r border-slate-200 text-center font-sans font-bold whitespace-nowrap ${tx.type === 'purchase' ? 'text-teal-700' : 'text-rose-600'}`}>
+                              <td className="px-2 py-1 border-r border-border-subtle align-middle text-center whitespace-nowrap font-bold text-text-primary">
+                                {(khatian.mouza?.trim() || tx.mouza).replace(/\s*মৌজা\s*$/, '')}
+                              </td>
+                              <td className="px-2 py-1 border-r border-border-subtle whitespace-nowrap">{toBengaliNumber(kParts.join(', '))}</td>
+                              <td className="px-2 py-1 border-r border-border-subtle whitespace-nowrap">{toBengaliNumber(dParts.join(', '))}</td>
+                              <td className="px-2 py-1 border-r border-border-subtle whitespace-nowrap">{dag.landClass || '-'}</td>
+                              <td className="px-2 py-1 border-r border-border-subtle text-center font-sans font-medium text-slate-teal whitespace-nowrap">{toBengaliNumber(dag.totalAmount)} শতক</td>
+                              <td className="px-2 py-1 border-r border-border-subtle text-center font-sans font-medium text-slate-teal whitespace-nowrap">{toBengaliNumber(khatian.hasNamjari ? (dag.namjariAmount || 0) : (dag.kateAmount || 0))} শতক</td>
+                              <td className={`px-2 py-1 border-r border-border-subtle text-center font-sans font-bold whitespace-nowrap ${tx.type === 'purchase' ? 'text-teal-700' : 'text-rose-700'}`}>
                                 {tx.type === 'purchase' ? `${toBengaliNumber(dag.amount)} শতক` : `-${toBengaliNumber(dag.amount)} শতক`}
                               </td>
                               {rIdx === 0 && (
@@ -606,7 +613,7 @@ export default function SearchQuery({
                                        ))}
                                      </div>
                                   ) : (
-                                    <span className="text-slate-400 italic text-[10px] flex justify-center items-center h-full">-</span>
+                                    <span className="text-text-muted italic text-[10px] flex justify-center items-center h-full">-</span>
                                   )}
                                 </td>
                               )}
